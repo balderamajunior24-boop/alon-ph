@@ -1,0 +1,127 @@
+---
+import { uiIcon } from "../lib/icons.js";
+const base = import.meta.env.BASE_URL;
+const basePath = base === "/" ? "" : base.replace(/\/$/, "");
+const currentPath = Astro.url.pathname.replace(basePath, "") || "/";
+const nav = [
+  { label: "Home", href: base, active: currentPath === "/" },
+  { label: "Catalog", href: `${base}catalog/`, active: currentPath.startsWith("/catalog") },
+  { label: "Services", href: `${base}services/`, active: currentPath.startsWith("/services") },
+];
+---
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href={base} aria-label="ALON-PH home">
+      <span class="brand-mark" aria-hidden="true">A</span>
+      <span><strong>ALON-PH</strong><small>EVENTS. MERCH. MEMORIES.</small></span>
+    </a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open navigation">
+      <span></span><span></span><span></span>
+    </button>
+    <nav id="site-nav" class="nav" aria-label="Main navigation">
+      {nav.map((item) => (
+        <a class:list={{ active: item.active }} href={item.href} aria-current={item.active ? "page" : undefined}>{item.label}</a>
+      ))}
+      <div class="mobile-nav-actions">
+        <a class="button button-primary" href={`${base}catalog/`}>Request a Quote <span set:html={uiIcon("arrowRight", 16)} /></a>
+        <a class="button button-outline" href={`${base}inquiry/`} data-open-inquiry>View Inquiry List</a>
+      </div>
+    </nav>
+    <button class="menu-backdrop" type="button" aria-label="Close navigation" tabindex="-1"></button>
+    <div class="header-actions">
+      <a class="button button-primary quote" href={`${base}catalog/`}><span set:html={uiIcon("send", 16)} /> Request Quote</a>
+      <a class="inquiry" href={`${base}inquiry/`} data-open-inquiry aria-label="Open inquiry list"><span set:html={uiIcon("list", 18)} /><span class="inquiry-label">Inquiry List</span><b data-inquiry-count>0</b></a>
+    </div>
+  </div>
+</header>
+
+<script>
+  const header = document.querySelector(".site-header");
+  const toggle = header?.querySelector(".menu-toggle");
+  const nav = header?.querySelector("#site-nav");
+  const backdrop = header?.querySelector(".menu-backdrop");
+
+  const setMenuOpen = (open) => {
+    toggle?.setAttribute("aria-expanded", String(open));
+    toggle?.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+    nav?.classList.toggle("open", open);
+    backdrop?.classList.toggle("open", open);
+    document.body.classList.toggle("nav-open", open);
+  };
+
+  toggle?.addEventListener("click", () => setMenuOpen(toggle.getAttribute("aria-expanded") !== "true"));
+  backdrop?.addEventListener("click", () => setMenuOpen(false));
+  nav?.addEventListener("click", (event) => {
+    if (event.target instanceof Element && event.target.closest("a")) setMenuOpen(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && toggle?.getAttribute("aria-expanded") === "true") {
+      setMenuOpen(false);
+      toggle.focus();
+    }
+  });
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 850) setMenuOpen(false);
+  });
+  const update = () => {
+    try {
+      const items = JSON.parse(localStorage.getItem("alon-ph:inquiry-list") || "[]");
+      const n = Array.isArray(items) ? items.length : 0;
+      document.querySelectorAll("[data-inquiry-count]").forEach((el) => (el.textContent = String(n)));
+    } catch {}
+  };
+  update();
+  window.addEventListener("inquiry:changed", update);
+</script>
+
+<style>
+  .site-header { position: sticky; z-index: 50; top: 0; height: 82px; border-bottom: 1px solid #f2ece8; background: rgba(255,255,255,.96); backdrop-filter: blur(14px); }
+  .header-inner { height: 100%; display: flex; align-items: center; gap: 28px; }
+  .brand { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .brand-mark { color: var(--brand); font-size: 2.35rem; font-weight: 900; font-style: italic; line-height: 1; transform: skew(-12deg); }
+  .brand strong { display: block; color: #e94f0a; font-size: 1.22rem; letter-spacing: .035em; line-height: 1; }
+  .brand small { display: block; margin-top: 4px; font-size: .48rem; font-weight: 800; letter-spacing: .075em; }
+  .nav { display: flex; align-self: stretch; align-items: center; justify-content: center; gap: clamp(18px, 2.3vw, 34px); margin-left: auto; }
+  .nav a { position: relative; font-size: .85rem; font-weight: 650; white-space: nowrap; }
+  .nav a::after { position: absolute; right: 50%; bottom: -28px; left: 50%; height: 3px; border-radius: 3px; background: var(--brand); content: ""; transition: left .2s, right .2s; }
+  .nav a:hover::after, .nav a.active::after { right: 0; left: 0; }
+  .nav .active { color: var(--brand); }
+  .header-actions { display: flex; align-items: center; gap: 13px; }
+  .quote { min-height: 43px; padding-inline: 16px; font-size: .8rem; white-space: nowrap; }
+  .inquiry { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid #ddd6d1; border-radius: 10px; font-size: .8rem; font-weight: 650; white-space: nowrap; transition: background .15s, border-color .15s; }
+  .inquiry:hover { background: #fff5ef; border-color: var(--brand); }
+  .inquiry > span:first-child { font-size: 1.2rem; line-height: 1; }
+  .inquiry b { display: grid; min-width: 20px; height: 20px; padding: 0 5px; place-items: center; border-radius: 999px; background: var(--brand); color: white; font-size: .68rem; font-weight: 800; }
+  .mobile-nav-actions, .menu-backdrop { display: none; }
+  .menu-toggle { display: none; width: 42px; height: 42px; margin-left: 4px; padding: 9px; border: 1px solid transparent; border-radius: 10px; background: transparent; cursor: pointer; }
+  .menu-toggle > span { display: block; width: 22px; height: 2px; margin: 5px 0; border-radius: 2px; background: var(--ink); transition: transform .2s ease, opacity .2s ease; }
+  .menu-toggle[aria-expanded="true"] > span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .menu-toggle[aria-expanded="true"] > span:nth-child(2) { opacity: 0; }
+  .menu-toggle[aria-expanded="true"] > span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  @media (max-width: 1060px) { .header-inner { gap: 16px; } .nav { gap: 15px; } .inquiry-label { display: none; } }
+  @media (max-width: 850px) {
+    .site-header { height: 70px; }
+    .menu-toggle { position: relative; z-index: 2; display: block; order: 3; }
+    .menu-toggle:hover { border-color: var(--line); background: var(--cream); }
+    .nav { position: absolute; z-index: 2; top: calc(100% + 8px); right: 14px; left: 14px; display: none; height: auto; padding: 10px; border: 1px solid var(--line); border-radius: 16px; background: white; box-shadow: 0 20px 45px rgba(54,35,23,.18); }
+    .nav.open { display: grid; gap: 2px; }
+    .nav > a { padding: 12px 14px; border-radius: 9px; font-size: .95rem; }
+    .nav > a:hover, .nav > a.active { background: var(--cream); color: var(--brand); }
+    .nav a::after { display: none; }
+    .mobile-nav-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+    .mobile-nav-actions .button { min-height: 44px; padding: 10px 12px; font-size: .78rem; }
+    .menu-backdrop.open { position: fixed; z-index: 1; inset: 70px 0 0; display: block; width: 100%; border: 0; background: rgba(35,39,43,.24); cursor: default; }
+    .header-inner { gap: 12px; }
+    .header-actions { margin-left: auto; }
+    .header-actions .quote { display: none; }
+  }
+  @media (max-width: 460px) {
+    .brand strong { font-size: 1rem; } .brand-mark { font-size: 1.9rem; }
+    .inquiry { padding: 6px 9px; gap: 6px; }
+    .mobile-nav-actions { grid-template-columns: 1fr; }
+  }
+</style>
+
+<style is:global>
+  body.nav-open { overflow: hidden; }
+</style>

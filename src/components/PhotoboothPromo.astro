@@ -1,0 +1,44 @@
+---
+import { uiIcon } from "../lib/icons.js";
+const { home = {} } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const features = (home.photobooth_features || "")
+  .split(",")
+  .map((f) => f.trim())
+  .filter(Boolean);
+---
+<section class="photo-section">
+  <div class="container promo">
+    <div class="promo-copy">
+      <h2>{home.photobooth_title}</h2>
+      <p>{home.photobooth_subtitle}</p>
+      <ul>{features.map((f) => <li><span set:html={uiIcon("check", 14)} />{f}</li>)}</ul>
+      <a class="button button-primary" href={`${base}services/`}>Learn More</a>
+    </div>
+    <div class="photo-collage" aria-hidden="true">
+      <div class="strips"><span set:html={`${uiIcon("camera", 22)}${uiIcon("camera", 22)}${uiIcon("camera", 22)}${uiIcon("camera", 22)}`} /><span set:html={`${uiIcon("camera", 22)}${uiIcon("camera", 22)}${uiIcon("camera", 22)}${uiIcon("camera", 22)}`} /></div>
+      <div class="booth"><i class="lamp one"></i><i class="lamp two"></i><strong>ALON-PH<br/><small>PHOTOBOOTH</small></strong><b set:html={uiIcon("camera", 28)} /><em></em></div>
+    </div>
+  </div>
+</section>
+<style>
+  .photo-section { padding: 18px 0 52px; }
+  .promo { display: grid; grid-template-columns: 35% 65%; min-height: 240px; overflow: hidden; border-radius: 15px; background: linear-gradient(105deg,#fff0df,#ffe2c6); }
+  .promo-copy { padding: 30px 38px; }
+  .promo h2 { margin: 0; font-size: 1.6rem; line-height: 1.2; }
+  .promo p { margin: 2px 0 13px; }
+  .promo ul { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px 18px; padding: 0; list-style: none; font-size: .75rem; }
+  .promo li { display: flex; align-items: center; gap: 7px; } .promo li span { color: var(--brand); }
+  .promo .button { min-height: 35px; margin-top: 9px; padding: 8px 19px; border-radius: 6px; font-size: .75rem; }
+  .photo-collage { position: relative; display: flex; align-items: center; gap: 20px; padding: 18px 25px 18px 0; }
+  .strips { z-index: 2; display: flex; gap: 8px; transform: rotate(-7deg); }
+  .strips span { display: grid; grid-template-columns: repeat(2,22px); gap: 7px; padding: 10px 8px; border: 7px solid white; background: linear-gradient(135deg,#edb594,#6f3928); box-shadow: 0 5px 10px #9c6a4a; color: white; }
+  .booth { position: relative; flex: 1; height: 205px; overflow: hidden; border-radius: 13px; background: linear-gradient(90deg,#503421,#9d6233 18%,#3a261c 19%,#7b3f24 76%,#2a211c); box-shadow: inset 0 -38px #9f201a; }
+  .booth:after { position: absolute; right: 23%; bottom: 0; width: 105px; height: 155px; background: #171719; box-shadow: inset -15px 0 #2d2d2d; content: ''; transform: skew(-2deg); }
+  .booth strong { position: absolute; z-index: 2; right: 25%; top: 60px; color: #e0a76c; text-align: center; transform: rotate(-3deg); } .booth small { font-size: .45rem; }
+  .booth b { position: absolute; z-index: 3; right: 30%; bottom: 22px; color: white; font-size: 1.7rem; }
+  .lamp { position: absolute; z-index: 3; top: 15px; width: 42px; height: 42px; border-radius: 50%; background: #fff; box-shadow: 0 0 18px white; } .lamp:after { position: absolute; top: 39px; left: 19px; width: 4px; height: 130px; background: #202020; content: ''; } .lamp.one { left: 16%; } .lamp.two { right: 7%; }
+  .booth em { position: absolute; right: 5%; bottom: 0; width: 65%; height: 28px; background: #303030; }
+  @media(max-width:800px){.promo{grid-template-columns:1fr}.photo-collage{min-height:240px;padding:14px 20px}.promo-copy{padding:28px}}
+  @media(max-width:500px){.promo ul{grid-template-columns:1fr}.booth{width:100%}}
+</style>

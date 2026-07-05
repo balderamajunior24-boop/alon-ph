@@ -1,0 +1,14 @@
+---
+import ProductCard from "./ProductCard.astro";
+const { products = [], columns = 6 } = Astro.props;
+---
+<div class:list={["card-grid", `cols-${columns}`]}>
+  {products.map((product) => <ProductCard product={product} />)}
+</div>
+<style>
+  .card-grid { display: grid; gap: 16px; }
+  .cols-6 { grid-template-columns: repeat(6, minmax(0,1fr)); }
+  .cols-4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+  @media(max-width:1000px){ .card-grid { grid-template-columns: repeat(3,1fr); } }
+  @media(max-width:680px){ .card-grid { grid-template-columns: repeat(2,1fr); } }
+</style>

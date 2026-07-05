@@ -1,0 +1,24 @@
+---
+import { categoryIcon } from "../lib/icons.js";
+const { categories = [] } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const items = categories.slice(0, 6);
+---
+<div class="category-wrap container" aria-label="Product categories">
+  <div class="category-strip">
+    {items.map((cat) => (
+      <a href={`${base}catalog/?cat=${cat.slug || cat.id}`}>
+        <span class="ico" set:html={categoryIcon(cat.name, 30)} />
+        <strong>{cat.name}</strong>
+      </a>
+    ))}
+  </div>
+</div>
+<style>
+  .category-wrap { position: relative; z-index: 8; margin-top: -51px; }
+  .category-strip { display: grid; grid-template-columns: repeat(6,1fr); gap: 14px; padding: 22px 26px; border-radius: 18px; background: #fff; box-shadow: var(--shadow); }
+  a { display: grid; min-width: 120px; height: 95px; place-items: center; padding: 12px 8px; border: 1px solid #f1dfd3; border-radius: 11px; text-align: center; transition: transform .18s, box-shadow .18s; }
+  a:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(76,52,35,.1); }
+  .ico { display: grid; place-items: center; color: var(--brand); } .ico :global(svg) { width: 30px; height: 30px; } strong { font-size: .8rem; margin-top: 4px; }
+  @media(max-width:760px){.category-wrap{margin-top:-38px;padding-left:14px}.category-strip{display:flex;overflow:auto;padding:15px;border-radius:15px 0 0 15px;scroll-snap-type:x mandatory}.category-strip a{flex:0 0 120px;height:87px;scroll-snap-align:start}}
+</style>

@@ -1,0 +1,33 @@
+---
+import { uiIcon } from "../lib/icons.js";
+const { home = {} } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const email = home.contact_email || "hello@alonph.com";
+---
+<section class="collab-section">
+  <div class="container collab">
+    <div>
+      <small>{home.collab_kicker}</small>
+      <h2>{home.collab_title}</h2>
+      <p>{home.collab_subtitle}</p>
+      <div class="offers">
+        <span><i set:html={uiIcon("support", 27)} /><b>Event Support<br/>& Coordination</b></span>
+        <span><i set:html={uiIcon("handshake", 27)} /><b>Supplier<br/>Partnerships</b></span>
+        <span><i set:html={uiIcon("users", 27)} /><b>Corporate &<br/>Reseller Programs</b></span>
+      </div>
+    </div>
+    <a class="partner" href={`mailto:${email}?subject=Partnership%20Inquiry`}><span set:html={uiIcon("handshake", 27)} /> Partner With Us</a>
+  </div>
+</section>
+<style>
+  .collab-section { padding: 0 0 18px; }
+  .collab { position: relative; display: flex; min-height: 248px; align-items: center; justify-content: space-between; overflow: hidden; padding: 34px 40px; border-radius: 14px; background: linear-gradient(112deg,#f4782d,#ff9349 62%,#f37a22); color: white; }
+  .collab:after { position: absolute; right: -8%; bottom: -150px; width: 580px; height: 270px; border: 1px solid rgba(255,255,255,.35); border-radius: 50%; box-shadow: 0 0 0 20px rgba(255,255,255,.08),0 0 0 47px rgba(255,255,255,.06),0 0 0 72px rgba(255,255,255,.04); content: ''; transform: rotate(-10deg); }
+  .collab>div,.partner { position: relative; z-index: 2; }
+  .collab small { font-size: .69rem; } .collab h2 { margin: 7px 0 2px; font-size: 1.85rem; } .collab p { margin: 0; font-size: 1rem; }
+  .offers { display: flex; gap: 45px; margin-top: 26px; }
+  .offers span { display: flex; align-items: center; gap: 10px; } .offers i { display:flex;font-style:normal; } .offers b { font-size: .74rem; line-height: 1.4; }
+  .partner { display: flex; min-width: 255px; min-height: 65px; align-items: center; justify-content: center; gap: 12px; border-radius: 10px; background: white; box-shadow: 0 10px 22px rgba(157,69,20,.2); color: var(--brand); font-size: 1.02rem; font-weight: 800; } .partner span { font-size: 1.7rem; }
+  @media(max-width:750px){.collab{display:block;padding:30px 25px}.partner{width:max-content;min-width:220px;margin-top:28px}.offers{flex-wrap:wrap;gap:18px 30px}}
+  @media(max-width:450px){.offers span:last-child{display:none}.collab h2{font-size:1.55rem}}
+</style>

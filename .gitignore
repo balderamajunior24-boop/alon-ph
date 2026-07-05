@@ -1,0 +1,14 @@
+# Secrets — never commit
+.env
+
+# Astro / Node
+node_modules/
+dist/
+.astro/
+
+# OS / editor
+.DS_Store
+*.log
+
+
+docs/

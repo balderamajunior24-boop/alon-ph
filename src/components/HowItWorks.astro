@@ -1,0 +1,35 @@
+---
+import { uiIcon } from "../lib/icons.js";
+const steps = [
+  ["mail", "Send Your Inquiry", "Tell us what you need, when, and your event details."],
+  ["edit", "Approve & Customize", "Review our mockups and confirm the design."],
+  ["settings", "We Produce", "We prepare your items with care and quality control."],
+  ["truck", "Delivery", "On-time delivery straight to your venue or address."],
+  ["check", "Event Success!", "You focus on your event, we handle the rest."],
+];
+---
+<section class="section works" id="how-it-works">
+  <div class="container">
+    <h2 class="section-title">How It Works</h2>
+    <div class="steps">
+      {steps.map(([icon, title, text], i) => (
+        <div class="step">
+          <span class="step-icon" set:html={uiIcon(icon, 30)} />
+          <div><h3>{title}</h3><p>{text}</p></div>
+          {i < steps.length - 1 && <i set:html={uiIcon("arrowRight", 24)} />}
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+<style>
+  .works { padding-top: 36px; }
+  .steps { display: grid; grid-template-columns: repeat(5,1fr); gap: 34px; margin-top: 25px; }
+  .step { position: relative; display: flex; min-height: 132px; align-items: flex-start; gap: 13px; padding: 22px 17px; border: 1px solid #f5d9c4; border-radius: 12px; background: linear-gradient(135deg,#fffaf5,#fff1e5); }
+  .step-icon { flex: 0 0 auto; color: var(--brand); font-size: 2rem; }
+  .step h3 { margin: 1px 0 8px; font-size: .82rem; }
+  .step p { margin: 0; color: #575553; font-size: .72rem; line-height: 1.55; }
+  .step i { position: absolute; z-index: 2; top: 50%; right: -29px; color: var(--brand); font-size: 1.7rem; font-style: normal; transform: translateY(-50%); }
+  @media(max-width:900px){.steps{grid-template-columns:repeat(2,1fr);gap:16px}.step i{display:none}.step:last-child{grid-column:1/-1}}
+  @media(max-width:530px){.steps{grid-template-columns:1fr}.step:last-child{grid-column:auto}}
+</style>

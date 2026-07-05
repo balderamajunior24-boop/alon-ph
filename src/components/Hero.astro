@@ -1,0 +1,55 @@
+---
+import { uiIcon } from "../lib/icons.js";
+const { home = {} } = Astro.props;
+const base = import.meta.env.BASE_URL;
+---
+<section class="hero">
+  <div class="container hero-grid">
+    <div class="hero-copy">
+      <h1>{home.hero_title_line1}<br/>{home.hero_title_line2}<br/>{home.hero_title_line3}<br/><em>{home.hero_title_highlight}</em></h1>
+      <p set:html={(home.hero_subtitle || "").replace(/\. /g, ".<br/>")}></p>
+      <div class="hero-buttons">
+        <a class="button button-primary" href={`${base}catalog/`}><span set:html={uiIcon("send", 17)} /> {home.hero_cta_primary}</a>
+        <a class="button button-outline" href={`${base}catalog/`}><span set:html={uiIcon("grid", 17)} /> {home.hero_cta_secondary}</a>
+      </div>
+      <div class="trust">
+        <div><b set:html={uiIcon("palette", 21)} /><span><strong>Customizable</strong>To Your Brand</span></div>
+        <div><b set:html={uiIcon("shield", 21)} /><span><strong>Quality Assured</strong>Premium Materials</span></div>
+        <div><b set:html={uiIcon("truck", 21)} /><span><strong>On-Time Delivery</strong>Nationwide</span></div>
+        <div><b set:html={uiIcon("support", 21)} /><span><strong>Dedicated Support</strong>From Start to Finish</span></div>
+      </div>
+    </div>
+    <div class="product-scene" aria-hidden="true">
+      <div class="box"><span>ALON-PH</span><small>EVENTS. MERCH. MEMORIES.</small></div>
+      <div class="tumbler"><span>ALON-PH</span></div>
+      <div class="notebook"><span>ALON-PH</span></div>
+      <div class="bag"><i></i><span>ALON-PH</span></div>
+      <div class="cloth"></div>
+    </div>
+  </div>
+</section>
+<style>
+  .hero { position: relative; min-height: 490px; overflow: hidden; background: linear-gradient(105deg,#fff8df 0%,#ffe7c5 48%,#ffd5ac 100%); }
+  .hero::after { position:absolute; right:-8%; bottom:-130px; width:600px; height:280px; border:1px solid rgba(255,255,255,.52); border-radius:50%; box-shadow:0 0 0 22px rgba(255,255,255,.14),0 0 0 48px rgba(255,255,255,.11),0 0 0 76px rgba(255,255,255,.08); content:""; transform:rotate(-16deg); }
+  .hero-grid { position: relative; z-index: 2; display: grid; min-height: 490px; grid-template-columns: 47% 53%; align-items: center; }
+  .hero-copy { padding: 44px 0 62px; }
+  h1 { margin: 0 0 18px; font-size: clamp(2rem,3.25vw,3.25rem); line-height: 1.08; letter-spacing: -.043em; }
+  h1 em { color: var(--brand); font-style: normal; }
+  .hero-copy > p { margin: 0 0 20px; color: #484d50; font-size: 1rem; }
+  .hero-buttons { display: flex; gap: 12px; }
+  .trust { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-top: 28px; }
+  .trust > div { display: flex; align-items: center; gap: 7px; }
+  .trust b { color: var(--brand); font-size: 1.3rem; } .trust span { color:#65625e;font-size:.57rem;line-height:1.35 } .trust strong { display:block;color:#343434;font-size:.61rem }
+  .product-scene { position: relative; align-self: stretch; min-width: 0; }
+  .box,.tumbler,.notebook,.bag { position:absolute; z-index:3; box-shadow:0 16px 26px rgba(84,45,21,.23); }
+  .box { left:8%; bottom:111px; width:44%; height:226px; border:2px solid #9b572b; border-radius:6px; background:linear-gradient(100deg,#c98246,#e4a76a); }
+  .box span{position:absolute;top:82px;left:28%;color:#c84913;font-size:1.45rem;font-weight:850}.box small{position:absolute;top:112px;left:29%;font-size:.43rem;color:#3c2a21;font-weight:800}
+  .tumbler { left:41%; bottom:91px; width:72px; height:240px; border-radius:12px 12px 20px 20px; background:linear-gradient(90deg,#171717,#545451 45%,#0c0c0c 75%); }
+  .tumbler span{position:absolute;left:24px;top:86px;color:#efb37c;font-weight:850;letter-spacing:.08em;writing-mode:vertical-rl}
+  .notebook { left:53%; bottom:78px; width:168px; height:239px; border-radius:8px; background:linear-gradient(120deg,#252525,#494846 46%,#111); transform:rotate(3deg); }.notebook span{position:absolute;top:100px;left:38px;color:#eee;font-weight:800}
+  .bag { right:0; bottom:103px; width:39%; height:250px; border:1px solid #d2b99e; background:linear-gradient(110deg,#e6d0b6,#fff4df 48%,#d8bd9e); clip-path:polygon(9% 0,91% 0,100% 100%,0 100%); }.bag i,.bag i::after{position:absolute;top:-72px;width:58px;height:92px;border:9px solid #c9a981;border-bottom:0;border-radius:50px 50px 0 0;content:""}.bag i{left:43px}.bag i::after{left:80px;top:-9px}.bag span{position:absolute;top:116px;left:26%;color:#c75019;font-size:1.35rem;font-weight:850}
+  .cloth{position:absolute;z-index:1;right:-20%;bottom:58px;width:104%;height:120px;border-radius:50%;background:linear-gradient(10deg,#e9470a,#ff7a23 65%,#da3906);filter:drop-shadow(0 8px 8px rgba(113,43,10,.18));transform:rotate(-7deg)}
+  @media(max-width:1000px){.hero-grid{grid-template-columns:52% 48%}.trust{grid-template-columns:repeat(2,1fr)}.product-scene{transform:scale(.87);transform-origin:right center}.box{left:-8%}.bag{right:-12%;width:48%}}
+  @media(max-width:740px){.hero-grid{display:block}.hero-copy{position:relative;z-index:7;padding:42px 0 240px}.product-scene{position:absolute;right:-90px;bottom:-70px;width:560px;height:390px;opacity:.55}.trust{display:none}.hero-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}h1{font-size:clamp(2rem,9vw,2.55rem);overflow-wrap:anywhere}.hero{min-height:640px}}
+  @media(max-width:600px){.hero-buttons{grid-template-columns:1fr}.hero-buttons .button{width:100%}.hero-copy{padding-top:36px}.hero{min-height:690px}}
+</style>

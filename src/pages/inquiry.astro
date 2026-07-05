@@ -1,0 +1,196 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getCatalog } from "../lib/catalog.js";
+import { placeholderImage, uiIcon } from "../lib/icons.js";
+
+const { home, products, services } = await getCatalog();
+const inquiryEmail = home.contact_email || process.env.INQUIRY_EMAIL || "hello@alonph.com";
+const base = import.meta.env.BASE_URL;
+
+// Map every possible inquiry id -> {image, url} so the page can show thumbnails.
+const meta = {};
+for (const p of products) {
+  const img = p.image || placeholderImage(`${p.tags} ${p.name}`, p.name);
+  const url = `${base}catalog/${p.slug}/`;
+  for (const v of p.variants) meta[v.id] = { image: v.image || img, url, minQty: Math.max(1, Number(v.attributes?.moq) || 1) };
+  meta[`product:${p.slug}`] = { image: img, url };
+}
+for (const s of services) {
+  meta[`service:${s.id}`] = {
+    image: s.image || placeholderImage(`${s.tags} ${s.name} service`, s.name),
+    url: `${base}services/${s.slug}/`,
+  };
+}
+---
+<BaseLayout home={home} title="Inquiry List | ALON-PH" description="Review your inquiry list and send it for a quotation.">
+  <div class="container inquiry-page">
+    <header class="page-head">
+      <span class="eyebrow">QUOTE REQUEST</span>
+      <h1>Your Inquiry List</h1>
+      <p class="lead">Review your selections and quantities. We’ll reply with final pricing, availability, and lead time.</p>
+      <div class="assurances" aria-label="What happens next">
+        <span><i set:html={uiIcon("check", 14)} />No payment required</span><span><i set:html={uiIcon("check", 14)} />Personalized quotation</span><span><i set:html={uiIcon("check", 14)} />Human follow-up</span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <section class="list-col">
+        <div id="items" class="items"></div>
+        <div id="empty" class="empty-state" hidden>
+          <span set:html={uiIcon("receipt", 48)} />
+          <h2>Your inquiry list is empty</h2>
+          <p class="muted">Browse the catalog or services and add items to request a quote.</p>
+          <div class="empty-actions">
+            <a class="button button-primary" href={`${base}catalog/`}>Browse Catalog</a>
+            <a class="button button-outline" href={`${base}services/`}>View Services</a>
+          </div>
+        </div>
+      </section>
+
+      <aside id="summary" class="summary" hidden>
+        <div class="summary-card">
+          <span class="summary-kicker">READY WHEN YOU ARE</span>
+          <h2>Inquiry summary</h2>
+          <div class="summary-row"><span>Items</span><b data-sum-lines>0</b></div>
+          <div class="summary-row"><span>Total quantity</span><b data-sum-qty>0</b></div>
+          <p class="summary-note">This opens a pre-filled email. You can add your contact and event details before sending.</p>
+          <button id="send" class="button button-primary block">Send for quotation <span set:html={uiIcon("arrowRight", 17)} /></button>
+          <a class="continue" href={`${base}catalog/`}><span set:html={uiIcon("arrowLeft", 15)} /> Continue browsing</a>
+          <button id="clear" class="clear-list">Clear all items</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline set:html={`window.__INQ__ = ${JSON.stringify({ email: inquiryEmail, meta, icons: { note: uiIcon("note", 14), package: uiIcon("package", 25) } })};`} />
+<script>
+  import { getItems, saveItems, removeItem, setQty, clear } from "../scripts/inquiry.js";
+  const { email, meta, icons } = window.__INQ__;
+  const wrap = document.querySelector("#items");
+  const empty = document.querySelector("#empty");
+  const summary = document.querySelector("#summary");
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+  function render() {
+    const items = getItems();
+    let migrated = false;
+    items.forEach((item) => {
+      const minQty = Math.max(1, Number(item.minQty) || Number(meta[item.id]?.minQty) || 1);
+      const qty = Math.max(minQty, Number(item.qty) || minQty);
+      if (item.minQty !== minQty || item.qty !== qty) { item.minQty = minQty; item.qty = qty; migrated = true; }
+    });
+    if (migrated) { saveItems(items); return; }
+    const isEmpty = items.length === 0;
+    empty.hidden = !isEmpty;
+    summary.hidden = isEmpty;
+    wrap.hidden = isEmpty;
+
+    const totalQty = items.reduce((s, i) => s + Math.max(1, Number(i.qty) || 1), 0);
+    document.querySelectorAll("[data-sum-lines]").forEach((el) => (el.textContent = String(items.length)));
+    document.querySelectorAll("[data-sum-qty]").forEach((el) => (el.textContent = String(totalQty)));
+
+    if (isEmpty) { wrap.innerHTML = ""; return; }
+    wrap.innerHTML = items.map((it) => {
+      const m = meta[it.id] || {};
+      const img = m.image ? `<a class="thumb" href="${m.url || "#"}"><img src="${m.image}" alt=""></a>` : `<span class="thumb ph">${icons.package}</span>`;
+      const title = m.url ? `<a href="${m.url}">${esc(it.productName)}</a>` : esc(it.productName);
+      return `
+        <div class="line-card" data-id="${esc(it.id)}">
+          ${img}
+          <div class="line-main">
+            <strong>${title}</strong>
+            ${it.variantName ? `<span class="muted">${esc(it.variantName)}</span>` : ""}
+            ${it.note ? `<span class="note">${icons.note} ${esc(it.note)}</span>` : ""}
+          </div>
+          <div class="line-controls">
+            <div class="stepper">
+              <button data-dec aria-label="Decrease">−</button>
+              <input class="qty" type="number" min="${Number(it.minQty) || 1}" value="${Number(it.qty) || 1}" aria-label="Quantity">
+              <button data-inc aria-label="Increase">+</button>
+            </div>
+            <button class="remove" data-remove aria-label="Remove">Remove</button>
+          </div>
+          <small class="minimum">Minimum order: ${Number(it.minQty) || 1} pcs</small>
+        </div>`;
+    }).join("");
+
+    wrap.querySelectorAll(".line-card").forEach((row) => {
+      const id = row.dataset.id;
+      const input = row.querySelector(".qty");
+      row.querySelector("[data-remove]").addEventListener("click", () => { removeItem(id); render(); });
+      row.querySelector("[data-dec]").addEventListener("click", () => { setQty(id, (parseInt(input.value,10)||1) - 1); render(); });
+      row.querySelector("[data-inc]").addEventListener("click", () => { const q = (parseInt(input.value,10)||1) + 1; input.value = q; setQty(id, q); render(); });
+      input.addEventListener("change", () => { setQty(id, parseInt(input.value,10)||1); render(); });
+    });
+  }
+
+  document.querySelector("#clear").addEventListener("click", () => { clear(); render(); });
+  document.querySelector("#send").addEventListener("click", () => {
+    const items = getItems();
+    if (!items.length) return;
+    const lines = ["Hi ALON-PH,", "", "I'd like to request a quotation for the following:", ""];
+    items.forEach((it, i) => lines.push(`${i + 1}. ${it.productName}${it.variantName ? " — " + it.variantName : ""}`, `   Qty: ${it.qty}${it.note ? "\n   Note: " + it.note : ""}`));
+    lines.push("", "Name: ", "Organization: ", "Contact number: ", "Event / needed by: ", "", "Thank you!");
+    window.location.href = `mailto:${email}?subject=${encodeURIComponent("ALON-PH inquiry — quotation request")}&body=${encodeURIComponent(lines.join("\n"))}`;
+  });
+
+  render();
+  window.addEventListener("inquiry:changed", render);
+</script>
+
+<style>
+  .inquiry-page { padding: 42px 0 30px; }
+  .page-head { margin-bottom: 30px; }
+  .eyebrow { color: var(--brand); font-size: .68rem; font-weight: 850; letter-spacing: .14em; }
+  .page-head h1 { margin: 5px 0 7px; font-size: clamp(1.8rem,3vw,2.45rem); letter-spacing: -.035em; }
+  .lead { margin: 0; color: #4d5257; max-width: 680px; }
+  .assurances { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 17px; color: #50705e; font-size: .78rem; font-weight: 700; }
+  .assurances span, .continue { display: inline-flex; align-items: center; gap: 5px; }
+  .layout { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 30px; align-items: start; }
+  .items { display: grid; gap: 12px; }
+  [hidden] { display: none !important; }
+
+  :global(.items .line-card) { display: grid; grid-template-columns: 96px 1fr auto; gap: 18px; align-items: center; padding: 14px; border: 1px solid #eadfd7; border-radius: 16px; background: #fff; box-shadow: 0 5px 18px rgba(44,43,42,.05); }
+  :global(.items .thumb) { display: grid; width: 96px; height: 88px; place-items: center; overflow: hidden; border-radius: 11px; background: linear-gradient(140deg,#fff7ef,#f8eee5); }
+  :global(.items .thumb img) { width: 100%; height: 100%; object-fit: cover; } :global(.items .thumb.ph) { color: #d6cfc7; font-size: 1.8rem; }
+  :global(.items .line-main) { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  :global(.items .line-main strong) { font-size: .98rem; } :global(.items .line-main strong a:hover) { color: var(--brand); }
+  :global(.items .line-main .muted) { color: var(--muted); font-size: .84rem; }
+  :global(.items .line-main .note) { color: #7a746c; font-size: .78rem; }
+  :global(.items .line-controls) { display: flex; align-items: center; gap: 14px; }
+  :global(.items .minimum) { grid-column: 2; color: var(--muted); font-size: .7rem; }
+  :global(.items .stepper) { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  :global(.items .stepper button) { width: 34px; height: 38px; border: 0; background: #fff; font-size: 1.1rem; cursor: pointer; color: var(--ink); }
+  :global(.items .stepper button:hover) { background: #fff2e9; color: var(--brand); }
+  :global(.items .stepper .qty) { width: 48px; height: 38px; border: 0; border-inline: 1px solid var(--line); text-align: center; font: inherit; -moz-appearance: textfield; }
+  :global(.items .stepper .qty::-webkit-outer-spin-button), :global(.items .stepper .qty::-webkit-inner-spin-button) { -webkit-appearance: none; margin: 0; }
+  :global(.items .remove) { border: 0; background: none; color: #b3261e; font-size: .82rem; font-weight: 600; cursor: pointer; }
+  :global(.items .remove:hover) { text-decoration: underline; }
+
+  .summary { position: sticky; top: 98px; }
+  .summary-card { padding: 23px; border: 1px solid #f1d4bf; border-radius: 18px; background: linear-gradient(145deg,#fff,#fff7f0); box-shadow: 0 14px 35px rgba(98,54,25,.08); }
+  .summary-kicker { color: var(--brand); font-size: .62rem; font-weight: 850; letter-spacing: .12em; }
+  .summary-card h2 { margin: 4px 0 16px; font-size: 1.18rem; }
+  .summary-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #efdfd3; font-size: .9rem; }
+  .summary-row b { font-weight: 800; }
+  .summary-note { margin: 12px 0 16px; color: #6b6259; font-size: .78rem; }
+  .block { width: 100%; margin-bottom: 12px; }
+  .continue { display: block; padding: 5px; text-align: center; font-size: .82rem; font-weight: 700; }
+  .continue:hover { color: var(--brand); }
+  .clear-list { display: block; margin: 10px auto 0; padding: 5px; border: 0; background: none; color: #a43a31; font-size: .76rem; cursor: pointer; }
+  .clear-list:hover { text-decoration: underline; }
+
+  .empty-state { display: grid; place-items: center; gap: 8px; padding: 60px 20px; text-align: center; border: 1px dashed var(--line); border-radius: 16px; background: #fffdfb; }
+  .empty-state span { font-size: 3rem; } .empty-state h2 { margin: 0; font-size: 1.2rem; } .empty-state .muted { color: var(--muted); margin: 0; }
+  .empty-actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+
+  @media(max-width:820px){ .layout { grid-template-columns: 1fr; } .summary { position: static; } }
+  @media(max-width:520px){
+    :global(.items .line-card) { grid-template-columns: 64px 1fr; gap: 12px; }
+    :global(.items .thumb) { width: 64px; height: 64px; }
+    :global(.items .line-controls) { grid-column: 1 / -1; justify-content: space-between; }
+    :global(.items .minimum) { grid-column: 1 / -1; }
+  }
+</style>

@@ -1,0 +1,74 @@
+# Build the catalog from Google Sheets and deploy to GitHub Pages.
+#
+# EASY .env -> GitHub setup (one time):
+#   Repo -> Settings -> Secrets and variables -> Actions -> "New repository secret"
+#   Add these secrets (same names as your .env keys):
+#     SHEET_ID
+#     SHEET_API_KEY
+#     INQUIRY_EMAIL
+#   (Optional, only if your tab names differ from the defaults:)
+#     TAB_CATEGORIES, TAB_PRODUCTS, TAB_VARIANTS
+#
+# Then: Repo -> Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
+# Every push to main rebuilds the site with the latest sheet data.
+# You can also rerun manually (Actions tab -> this workflow -> "Run workflow"),
+# or on the schedule below to pick up sheet edits automatically.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # manual "Run workflow" button
+  schedule:
+    - cron: "0 * * * *" # hourly: rebuild to pick up sheet edits (optional)
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build (reads sheet via secrets)
+        env:
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          SHEET_API_KEY: ${{ secrets.SHEET_API_KEY }}
+          INQUIRY_EMAIL: ${{ secrets.INQUIRY_EMAIL }}
+          TAB_CATEGORIES: ${{ secrets.TAB_CATEGORIES }}
+          TAB_PRODUCTS: ${{ secrets.TAB_PRODUCTS }}
+          TAB_VARIANTS: ${{ secrets.TAB_VARIANTS }}
+          TAB_SERVICES: ${{ secrets.TAB_SERVICES }}
+          TAB_HOME: ${{ secrets.TAB_HOME }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          BASE_PATH: ${{ vars.BASE_PATH }}
+        run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

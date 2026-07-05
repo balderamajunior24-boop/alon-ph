@@ -1,0 +1,238 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getCatalog } from "../../lib/catalog.js";
+
+export async function getStaticPaths() {
+  const { products } = await getCatalog();
+  return products.map((product) => ({
+    params: { slug: product.slug },
+    props: { product },
+  }));
+}
+
+import { placeholderImage, uiIcon } from "../../lib/icons.js";
+const { product } = Astro.props;
+const { categories, home, products } = await getCatalog();
+const base = import.meta.env.BASE_URL;
+const category = categories.find((c) => c.id === product.categoryId);
+
+// Gallery: product main image + product gallery + any variant images (deduped).
+const images = [
+  product.image,
+  ...product.gallery,
+  ...product.variants.map((v) => v.image),
+].filter(Boolean);
+let uniqueImages = [...new Set(images)];
+// Fall back to a branded placeholder when there are no real images yet.
+if (uniqueImages.length === 0) {
+  uniqueImages = [placeholderImage(`${product.tags} ${product.name}`, product.name)];
+}
+
+// Variant lookup for the client (price/moq/image per option).
+const variantData = {};
+product.variants.forEach((v) => {
+  variantData[v.id] = {
+    name: v.name,
+    price: v.attributes?.price || "",
+    moq: v.attributes?.moq || "",
+    image: v.image || "",
+    notes: v.notes || "",
+  };
+});
+const firstMoq = product.variants[0]?.attributes?.moq || 1;
+
+// Related: same category, excluding self.
+const related = products
+  .filter((p) => p.categoryId === product.categoryId && p.slug !== product.slug)
+  .slice(0, 5);
+---
+<BaseLayout home={home} title={`${product.name} | ALON-PH`} description={product.desc}>
+  <div class="container detail">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href={`${base}catalog/`}>Catalog</a>
+      {category && <><span>/</span><a href={`${base}catalog/?cat=${category.slug || category.id}`}>{category.name}</a></>}
+      <span>/</span><b>{product.name}</b>
+    </nav>
+
+    <div class="detail-grid">
+      <!-- Gallery -->
+      <section class="gallery" aria-label={`${product.name} images`}>
+        <div class="main">
+          <img id="main-image" src={uniqueImages[0]} alt={product.name} />
+        </div>
+        {uniqueImages.length > 1 && (
+          <div class="thumbs">
+            {uniqueImages.map((src, i) => (
+              <button class:list={["thumb", { "thumb--active": i === 0 }]} data-src={src} aria-label={`Image ${i + 1}`}>
+                <img src={src} alt="" loading="lazy" />
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <!-- Info + customize -->
+      <section class="info">
+        <h1>{product.name}</h1>
+        {product.desc && <p class="lead">{product.desc}</p>}
+
+        <form id="customize" class="panel">
+          {product.variants.length > 1 && (
+            <fieldset class="field variant-field">
+              <legend>Choose an option</legend>
+              <div class="variant-options">
+                {product.variants.map((v, index) => (
+                  <label class="variant-option">
+                    <input type="radio" name="variant" value={v.id} checked={index === 0} />
+                    <span class="variant-option__body">
+                      <strong>{v.name}</strong>
+                      <small>
+                        {v.attributes?.price ? `From ₱${v.attributes.price}` : "Quote on inquiry"}
+                        {v.attributes?.moq ? ` · Min ${v.attributes.moq} pcs` : ""}
+                      </small>
+                    </span>
+                    <span class="variant-option__check" set:html={uiIcon("check", 12)} />
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
+          {product.variants.length === 1 && <input type="hidden" id="variant" value={product.variants[0].id} />}
+
+          <div class="pricing">
+            <span id="price" class="price"></span>
+            <span id="moq" class="moq muted"></span>
+          </div>
+
+          <label class="field">
+            <span>Quantity</span>
+            <input id="qty" type="number" min="1" value={firstMoq} />
+          </label>
+
+          <label class="field">
+            <span>Notes (optional)</span>
+            <textarea id="note" rows="3" placeholder="Event date, colors, print details…"></textarea>
+          </label>
+
+          <button type="submit" class="button button-primary block"><span set:html={uiIcon("addList", 17)} /> Add to Inquiry List</button>
+          <p id="status" class="status" role="status" aria-live="polite"></p>
+          <p class="hint muted">No instant checkout — we reply to your inquiry with a quotation.</p>
+        </form>
+      </section>
+    </div>
+
+    {related.length > 0 && (
+      <section class="related">
+        <h2 class="section-title">More in {category?.name || "this category"}</h2>
+        <div class="rel-grid">
+          {related.map((p) => (
+            <a class="rel-card" href={`${base}catalog/${p.slug}/`}>
+              <div class="rel-img"><img src={p.image || placeholderImage(`${p.tags} ${p.name}`, p.name)} alt={p.name} loading="lazy" /></div>
+              <strong>{p.name}</strong>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+  </div>
+</BaseLayout>
+
+<script is:inline set:html={`window.__PRODUCT__ = ${JSON.stringify({ variantData, productName: product.name })};`} />
+<script>
+  import { addItem } from "../../scripts/inquiry.js";
+  const { variantData, productName } = window.__PRODUCT__;
+
+  const mainImage = document.querySelector("#main-image");
+  const thumbs = [...document.querySelectorAll(".thumb")];
+  const variantInputs = [...document.querySelectorAll('input[name="variant"]')];
+  const qty = document.querySelector("#qty");
+  const priceEl = document.querySelector("#price");
+  const moqEl = document.querySelector("#moq");
+  const status = document.querySelector("#status");
+
+  function currentVariantId() {
+    return variantInputs.find((input) => input.checked)?.value || document.querySelector("#variant")?.value || Object.keys(variantData)[0];
+  }
+
+  function selectThumb(src) {
+    if (mainImage && src) mainImage.src = src;
+    thumbs.forEach((t) => t.classList.toggle("thumb--active", t.dataset.src === src));
+  }
+  thumbs.forEach((t) => t.addEventListener("click", () => selectThumb(t.dataset.src)));
+
+  function syncVariant() {
+    const v = variantData[currentVariantId()];
+    if (!v) return;
+    priceEl.textContent = v.price ? `from ₱${v.price}` : "Quote on inquiry";
+    moqEl.textContent = v.moq ? `Min order: ${v.moq} pcs` : "";
+    if (v.moq) qty.value = v.moq;
+    if (v.image) selectThumb(v.image);
+  }
+  variantInputs.forEach((input) => input.addEventListener("change", syncVariant));
+  syncVariant();
+
+  document.querySelector("#customize").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const id = currentVariantId();
+    const v = variantData[id];
+    addItem({
+      id,
+      productName,
+      variantName: v?.name || "",
+      qty: Math.max(1, parseInt(qty.value, 10) || 1),
+      minQty: Math.max(1, Number(v?.moq) || 1),
+      note: document.querySelector("#note").value,
+    });
+    status.textContent = "Added to your inquiry list. Open it from the header when ready.";
+  });
+</script>
+
+<style>
+  .detail { width: min(calc(100% - 40px), 1320px); padding: 22px 0 10px; }
+  .crumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; color: var(--muted); font-size: .82rem; }
+  .crumbs a:hover { color: var(--brand); }
+  .detail-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(560px, 1.1fr); gap: 34px; align-items: start; }
+  .gallery { min-width: 0; }
+  .main { display: grid; min-height: 420px; place-items: center; overflow: hidden; border: 1px solid #f2ddce; border-radius: 18px; background: #fff8f1; }
+  .main img { width: 100%; height: 100%; max-height: 520px; object-fit: contain; }
+  .main .ph { color: #d8ccc0; font-size: 4rem; }
+  .thumbs { display: flex; gap: 10px; overflow-x: auto; margin-top: 12px; padding-bottom: 4px; }
+  .thumb { flex: 0 0 76px; height: 76px; overflow: hidden; padding: 3px; border: 2px solid transparent; border-radius: 12px; background: #fff; cursor: pointer; }
+  .thumb img { width: 100%; height: 100%; border-radius: 8px; object-fit: cover; }
+  .thumb--active { border-color: var(--brand); }
+  .info h1 { margin: 0 0 8px; font-size: clamp(1.5rem,2.5vw,2rem); }
+  .lead { margin: 0 0 18px; color: #4d5257; }
+  .panel { padding: 20px; border: 1px solid #f5d8c1; border-radius: 16px; background: #fff; box-shadow: 0 12px 30px rgba(119,58,17,.06); }
+  .field { display: grid; gap: 6px; margin-bottom: 14px; font-weight: 650; font-size: .9rem; }
+  .field input, .field textarea { padding: 11px 12px; border: 1px solid #d7d7d7; border-radius: 10px; font: inherit; }
+  .variant-field { min-width: 0; padding: 0; border: 0; }
+  .variant-field legend { margin-bottom: 8px; padding: 0; font-weight: 650; }
+  .variant-options { display: grid; max-height: 208px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; overflow-y: auto; padding: 2px 6px 3px 2px; scrollbar-color: #d9bca9 transparent; scrollbar-width: thin; }
+  .variant-option { position: relative; min-width: 0; cursor: pointer; }
+  .variant-option input { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+  .variant-option__body { display: flex; min-height: 44px; flex-direction: column; justify-content: center; padding: 7px 28px 7px 9px; border: 1.5px solid #dfd5ce; border-radius: 9px; background: #fff; transition: border-color .15s ease, background .15s ease, box-shadow .15s ease; }
+  .variant-option__body strong { overflow-wrap: anywhere; font-size: .84rem; line-height: 1.25; }
+  .variant-option__body small { display: none; }
+  .variant-option__check { position: absolute; top: 50%; right: 8px; display: grid; width: 18px; height: 18px; place-items: center; border: 1.5px solid #cfc5be; border-radius: 50%; color: transparent; font-size: .62rem; transform: translateY(-50%); }
+  .variant-option:hover .variant-option__body { border-color: #eea47e; background: #fffaf6; }
+  .variant-option input:checked + .variant-option__body { border-color: var(--brand); background: #fff7f1; box-shadow: 0 0 0 1px var(--brand); }
+  .variant-option input:checked ~ .variant-option__check { border-color: var(--brand); background: var(--brand); color: #fff; }
+  .variant-option input:focus-visible + .variant-option__body { outline: 3px solid rgba(237, 82, 9, .38); outline-offset: 3px; }
+  .pricing { display: flex; align-items: baseline; gap: 14px; margin-bottom: 14px; }
+  .price { color: var(--brand); font-size: 1.15rem; font-weight: 800; }
+  .moq { font-size: .82rem; }
+  .block { width: 100%; }
+  .status { min-height: 1.3em; margin: 10px 0 0; color: #1c7a4b; font-size: .86rem; }
+  .hint { margin: 8px 0 0; font-size: .78rem; }
+  .related { margin-top: 46px; }
+  .rel-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; margin-top: 18px; }
+  .rel-card { padding: 8px; border: 1px solid #ece9e6; border-radius: 12px; background: #fff; text-align: center; }
+  .rel-card:hover { box-shadow: 0 8px 18px rgba(76,52,35,.1); }
+  .rel-img { display: grid; height: 120px; place-items: center; overflow: hidden; border-radius: 8px; background: linear-gradient(140deg,#fffdf9,#f8f5f0); }
+  .rel-img img { width: 100%; height: 100%; object-fit: cover; } .rel-img span { color: #d6cfc7; font-size: 2rem; }
+  .rel-card strong { display: block; margin-top: 8px; font-size: .78rem; }
+  @media(max-width:1100px){ .detail-grid { grid-template-columns: minmax(0,1fr) minmax(480px,1fr); } .variant-options { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+  @media(max-width:860px){ .detail { width: min(calc(100% - 28px), 1320px); } .detail-grid { grid-template-columns: 1fr; } .variant-options { max-height: 208px; grid-template-columns: repeat(4,minmax(0,1fr)); } .rel-grid { grid-template-columns: repeat(2,1fr); } .main { min-height: 300px; } }
+  @media(max-width:600px){ .variant-options { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+  @media(max-width:480px){ .panel { padding: 16px; } .variant-options { max-height: 208px; grid-template-columns: repeat(2,minmax(0,1fr)); } .main { min-height: 250px; } }
+</style>

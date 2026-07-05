@@ -1,0 +1,180 @@
+---
+import { getCatalog } from "../lib/catalog.js";
+import { uiIcon } from "../lib/icons.js";
+const { home = {} } = Astro.props;
+const inquiryEmail = home.contact_email || "hello@alonph.com";
+const base = import.meta.env.BASE_URL;
+const { products } = await getCatalog();
+const minimums = Object.fromEntries(products.flatMap((p) => p.variants.map((v) => [v.id, Math.max(1, Number(v.attributes?.moq) || 1)])));
+---
+<div id="inquiry-overlay" class="overlay" hidden></div>
+<aside id="inquiry-drawer" class="drawer" aria-hidden="true" aria-label="Inquiry list" role="dialog" aria-modal="true" inert>
+  <div class="drawer__head">
+    <div><span class="eyebrow">QUOTE REQUEST</span><h2>Your Inquiry List <b data-inquiry-count-pill>0</b></h2></div>
+    <button id="drawer-close" class="icon-btn" aria-label="Close"><span set:html={uiIcon("close", 18)} /></button>
+  </div>
+
+  <div id="drawer-body" class="drawer__body"></div>
+
+  <div class="drawer__foot">
+    <p class="hint">Inquiries are sent by email first — we reply with pricing &amp; lead time.</p>
+    <div class="foot-actions">
+      <button id="drawer-send" class="button button-primary block" disabled><span set:html={uiIcon("mail", 17)} /> Send by email</button>
+      <a class="button button-outline block" href={`${base}inquiry/`}>Open full list <span set:html={uiIcon("arrowRight", 16)} /></a>
+    </div>
+    <button id="drawer-clear" class="link-clear" hidden>Clear list</button>
+  </div>
+</aside>
+
+<script is:inline set:html={`window.__INQUIRY_EMAIL__ = ${JSON.stringify(inquiryEmail)};`} />
+<script is:inline set:html={`window.__INQUIRY_MINIMUMS__ = ${JSON.stringify(minimums)}; window.__INQUIRY_EMPTY_ICON__ = ${JSON.stringify(uiIcon("receipt", 44))};`} />
+<script>
+  import { getItems, saveItems, removeItem, setQty, clear } from "../scripts/inquiry.js";
+  const email = window.__INQUIRY_EMAIL__;
+  const minimums = window.__INQUIRY_MINIMUMS__ || {};
+  const drawer = document.querySelector("#inquiry-drawer");
+  const overlay = document.querySelector("#inquiry-overlay");
+  const body = document.querySelector("#drawer-body");
+  const sendBtn = document.querySelector("#drawer-send");
+  const clearBtn = document.querySelector("#drawer-clear");
+  let returnFocus = null;
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+  function render() {
+    const items = getItems();
+    let migrated = false;
+    items.forEach((item) => {
+      const minQty = Math.max(1, Number(item.minQty) || Number(minimums[item.id]) || 1);
+      const qty = Math.max(minQty, Number(item.qty) || minQty);
+      if (item.minQty !== minQty || item.qty !== qty) { item.minQty = minQty; item.qty = qty; migrated = true; }
+    });
+    if (migrated) saveItems(items);
+    const empty = items.length === 0;
+    sendBtn.disabled = empty;
+    clearBtn.hidden = empty;
+    document.querySelectorAll("[data-inquiry-count-pill]").forEach((el) => (el.textContent = String(items.length)));
+
+    if (empty) {
+      body.innerHTML = `<div class="empty"><span>${window.__INQUIRY_EMPTY_ICON__}</span><p>Your list is empty.</p><p class="muted">Add products or services to request a quote.</p></div>`;
+      return;
+    }
+    body.innerHTML = items.map((it) => `
+      <div class="line" data-id="${esc(it.id)}">
+        <span class="line__mark" aria-hidden="true">${esc(it.productName).charAt(0).toUpperCase()}</span>
+        <div class="line__info">
+          <strong>${esc(it.productName)}</strong>
+          ${it.variantName ? `<span class="muted">${esc(it.variantName)}</span>` : ""}
+          ${it.note ? `<span class="line__note">${esc(it.note)}</span>` : ""}
+        </div>
+        <div class="line__actions">
+          <div class="stepper">
+            <button type="button" data-dec aria-label="Decrease ${esc(it.productName)} quantity">−</button>
+            <input class="qty" type="number" min="${Number(it.minQty) || 1}" value="${Number(it.qty) || 1}" aria-label="Quantity for ${esc(it.productName)}">
+            <button type="button" data-inc aria-label="Increase ${esc(it.productName)} quantity">+</button>
+          </div>
+          <button class="remove" data-remove aria-label="Remove ${esc(it.productName)}">Remove</button>
+        </div>
+        <small class="line__minimum">Minimum: ${Number(it.minQty) || 1} pcs</small>
+      </div>`).join("");
+
+    body.querySelectorAll(".line").forEach((row) => {
+      const id = row.dataset.id;
+      const input = row.querySelector(".qty");
+      row.querySelector("[data-remove]").addEventListener("click", () => { removeItem(id); render(); });
+      row.querySelector("[data-dec]").addEventListener("click", () => { setQty(id, (parseInt(input.value, 10) || 1) - 1); render(); });
+      row.querySelector("[data-inc]").addEventListener("click", () => { setQty(id, (parseInt(input.value, 10) || 1) + 1); render(); });
+      input.addEventListener("change", () => { setQty(id, Math.max(1, parseInt(input.value, 10) || 1)); render(); });
+    });
+  }
+
+  function open() {
+    render();
+    returnFocus = document.activeElement;
+    drawer.inert = false;
+    drawer.classList.add("open");
+    overlay.hidden = false;
+    requestAnimationFrame(() => overlay.classList.add("show"));
+    drawer.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    document.querySelector("#drawer-close").focus();
+  }
+  function close() {
+    drawer.classList.remove("open");
+    overlay.classList.remove("show");
+    drawer.setAttribute("aria-hidden", "true");
+    drawer.inert = true;
+    document.body.style.overflow = "";
+    setTimeout(() => (overlay.hidden = true), 220);
+    returnFocus?.focus?.();
+  }
+
+  // Header button opens the drawer (intercept its link).
+  document.querySelectorAll("[data-open-inquiry]").forEach((el) => el.addEventListener("click", (e) => { e.preventDefault(); open(); }));
+  document.querySelector("#drawer-close").addEventListener("click", close);
+  overlay.addEventListener("click", close);
+  document.addEventListener("keydown", (e) => {
+    if (!drawer.classList.contains("open")) return;
+    if (e.key === "Escape") close();
+    if (e.key === "Tab") {
+      const focusable = [...drawer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')];
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+    }
+  });
+  clearBtn.addEventListener("click", () => { clear(); render(); });
+
+  sendBtn.addEventListener("click", () => {
+    const items = getItems();
+    if (!items.length) return;
+    const lines = ["Hi ALON-PH,", "", "I'd like to request a quotation for the following:", ""];
+    items.forEach((it, i) => lines.push(`${i + 1}. ${it.productName}${it.variantName ? " — " + it.variantName : ""}`, `   Qty: ${it.qty}${it.note ? "\n   Note: " + it.note : ""}`));
+    lines.push("", "Name: ", "Organization: ", "Contact number: ", "Event / needed by: ", "", "Thank you!");
+    window.location.href = `mailto:${email}?subject=${encodeURIComponent("ALON-PH inquiry — quotation request")}&body=${encodeURIComponent(lines.join("\n"))}`;
+  });
+
+  // Open automatically right after an item is added (nice feedback), and keep in sync.
+  window.addEventListener("inquiry:changed", () => { if (drawer.classList.contains("open")) render(); });
+  window.addEventListener("inquiry:added", open);
+  render();
+</script>
+
+<style>
+  .overlay { position: fixed; inset: 0; z-index: 60; background: rgba(28,16,11,.4); opacity: 0; transition: opacity .2s; }
+  .overlay.show { opacity: 1; }
+  .drawer { position: fixed; top: 0; right: 0; z-index: 70; display: flex; flex-direction: column; width: min(460px, 100vw); height: 100dvh; background: #fff; box-shadow: -12px 0 40px rgba(60,30,12,.22); transform: translateX(100%); transition: transform .24s ease; }
+  .drawer.open { transform: translateX(0); }
+  .drawer__head { display: flex; align-items: center; justify-content: space-between; padding: 20px 22px 17px; border-bottom: 1px solid var(--line); background: linear-gradient(120deg,#fff,#fff8f2); }
+  .eyebrow { display: block; margin-bottom: 3px; color: var(--brand); font-size: .62rem; font-weight: 850; letter-spacing: .13em; }
+  .drawer__head h2 { margin: 0; font-size: 1.18rem; display: flex; align-items: center; gap: 9px; }
+  .drawer__head b { display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--brand); color: #fff; font-size: .72rem; }
+  .icon-btn { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 9px; background: #fff; cursor: pointer; color: var(--ink); }
+  .icon-btn:hover { background: #fff5ef; }
+  .icon-btn.sm { width: 30px; height: 30px; color: #b3261e; }
+  .drawer__body { flex: 1; overflow-y: auto; padding: 16px 18px; background: #fdfbf9; }
+  :global(.drawer .line) { display: grid; grid-template-columns: 42px 1fr; gap: 4px 11px; margin-bottom: 10px; padding: 13px; border: 1px solid #eadfd7; border-radius: 13px; background: #fff; box-shadow: 0 3px 10px rgba(53,35,24,.04); }
+  :global(.drawer .line__mark) { display: grid; width: 42px; height: 42px; grid-row: 1 / 3; place-items: center; border-radius: 10px; background: #fff0e5; color: var(--brand); font-weight: 850; }
+  :global(.drawer .line__info) { min-width: 0; display: flex; flex-direction: column; }
+  :global(.drawer .line__info strong) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.drawer .line__info .muted) { font-size: .8rem; color: var(--muted); }
+  :global(.drawer .line__note) { margin-top: 2px; color: #766d66; font-size: .72rem; }
+  :global(.drawer .line__actions) { display: flex; grid-column: 2; align-items: center; justify-content: space-between; margin-top: 7px; }
+  :global(.drawer .line__minimum) { grid-column: 2; color: var(--muted); font-size: .68rem; }
+  :global(.drawer .stepper) { display: flex; overflow: hidden; border: 1px solid #ded4cd; border-radius: 9px; }
+  :global(.drawer .stepper button) { width: 31px; height: 32px; border: 0; background: #fff; color: var(--ink); cursor: pointer; }
+  :global(.drawer .stepper button:hover) { background: #fff1e7; color: var(--brand); }
+  :global(.drawer .qty) { width: 43px; height: 32px; padding: 0; border: 0; border-inline: 1px solid #ded4cd; text-align: center; font: inherit; -moz-appearance: textfield; }
+  :global(.drawer .qty::-webkit-inner-spin-button), :global(.drawer .qty::-webkit-outer-spin-button) { margin: 0; -webkit-appearance: none; }
+  :global(.drawer .remove) { padding: 6px; border: 0; background: none; color: #a43a31; font-size: .75rem; font-weight: 700; cursor: pointer; }
+  :global(.drawer .remove:hover) { text-decoration: underline; }
+  .empty { display: grid; place-items: center; gap: 4px; padding: 60px 20px; text-align: center; }
+  .empty span { font-size: 2.4rem; } .empty p { margin: 0; } .empty .muted { color: var(--muted); font-size: .86rem; }
+  .drawer__foot { padding: 16px 20px max(16px,env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: #fffaf6; box-shadow: 0 -8px 24px rgba(69,43,25,.06); }
+  .hint { margin: 0 0 12px; color: #6b6259; font-size: .78rem; }
+  .foot-actions { display: grid; gap: 8px; }
+  .block { width: 100%; }
+  .link-clear { display: block; margin: 12px auto 0; padding: 4px; border: 0; background: none; color: #b3261e; font-size: .8rem; cursor: pointer; }
+  .link-clear:hover { text-decoration: underline; }
+</style>

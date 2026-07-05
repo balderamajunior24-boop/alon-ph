@@ -1,0 +1,68 @@
+---
+import { placeholderImage, uiIcon } from "../lib/icons.js";
+const { product } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const url = `${base}catalog/${product.slug}/`;
+const img = product.image || placeholderImage(`${product.tags} ${product.name}`, product.name);
+
+// Badge: quote-based if no variant has a price, else min-order from lowest MOQ.
+const prices = product.variants.map((v) => v.attributes?.price).filter(Boolean);
+const moqs = product.variants.map((v) => Number(v.attributes?.moq)).filter((n) => n > 0);
+const minMoq = moqs.length ? Math.min(...moqs) : 0;
+const badge = prices.length === 0 ? { kind: "quote-based", label: "Quote-Based" }
+  : minMoq ? { kind: "min-order", label: `Min Order ${minMoq} pcs` }
+  : { kind: "min-order", label: "Made to order" };
+const fromPrice = prices.length ? Math.min(...prices.map(Number)) : null;
+const defaultMoq = Math.max(1, Number(product.variants[0]?.attributes?.moq) || 1);
+---
+<article class="product-card">
+  <span class:list={["badge", badge.kind]}>{badge.label}</span>
+  <a class="product-art" href={url} aria-label={`View ${product.name}`}>
+    <img src={img} alt={product.name} loading="lazy" />
+  </a>
+  <h3><a href={url}>{product.name}</a></h3>
+  {fromPrice
+    ? <p class="price">from ₱{fromPrice}</p>
+    : <p class="price muted">Quote on inquiry</p>}
+  <a class="card-action primary" href={url}><span set:html={uiIcon("edit", 13)} /> Customize This</a>
+  <button class="card-action secondary" type="button" data-add-inquiry
+    data-id={product.variants[0]?.id || `product:${product.slug}`}
+    data-product={product.name}
+    data-variant={product.variants[0]?.name || ""}
+    data-moq={defaultMoq}><span set:html={uiIcon("addList", 13)} /> Add to Inquiry List</button>
+</article>
+<style>
+  .product-card { position: relative; min-width: 0; padding: 9px 9px 10px; border: 1px solid #ece9e6; border-radius: 12px; background: #fff; box-shadow: 0 4px 13px rgba(44,43,42,.09); text-align: center; }
+  .badge { position: absolute; z-index: 3; top: 8px; left: 8px; display: inline-flex; padding: 4px 7px; border-radius: 5px; color: white; font-size: .58rem; font-weight: 800; }
+  .quote-based { background: #ed6a16; } .min-order { background: #27965d; }
+  .product-art { position: relative; display: grid; height: 178px; overflow: hidden; place-items: center; border-radius: 8px; background: linear-gradient(140deg,#fffdf9,#f8f5f0); }
+  .product-art img { width: 100%; height: 100%; object-fit: cover; }
+  .product-art .ph { color: #d6cfc7; font-size: 3rem; }
+  h3 { min-height: 34px; margin: 9px 0 3px; font-size: .82rem; line-height: 1.3; }
+  .price { margin: 0 0 7px; color: var(--brand); font-size: .78rem; font-weight: 750; }
+  .price.muted { color: var(--muted); font-weight: 600; }
+  .card-action { display: flex; width: 100%; min-height: 29px; align-items: center; justify-content: center; margin-top: 6px; border-radius: 5px; font-size: .65rem; font-weight: 750; cursor: pointer; }
+  .primary { background: var(--brand); color: #fff; }
+  .secondary { border: 1px solid #efcbb8; background: white; color: #474747; transition: background .15s, color .15s, border-color .15s; }
+  .secondary:hover { background: #fff5ef; }
+  .card-action.is-added { background: #1c7a4b; border-color: #1c7a4b; color: #fff; }
+</style>
+<script>
+  import { addItem } from "../scripts/inquiry.js";
+  document.addEventListener("click", (e) => {
+    const btn = (e.target).closest("[data-add-inquiry]");
+    if (!btn || btn.dataset.busy) return;
+    const minQty = Math.max(1, Number(btn.dataset.moq) || 1);
+    addItem({ id: btn.dataset.id, productName: btn.dataset.product, variantName: btn.dataset.variant, qty: minQty, minQty });
+    // Brief confirmation, then revert so the button is reusable.
+    const original = btn.dataset.label || (btn.dataset.label = btn.innerHTML);
+    btn.dataset.busy = "1";
+    btn.classList.add("is-added");
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg> Added';
+    setTimeout(() => {
+      btn.innerHTML = original;
+      btn.classList.remove("is-added");
+      delete btn.dataset.busy;
+    }, 1400);
+  });
+</script>

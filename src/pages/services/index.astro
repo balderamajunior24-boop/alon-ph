@@ -1,0 +1,82 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getCatalog } from "../../lib/catalog.js";
+import { placeholderImage, uiIcon } from "../../lib/icons.js";
+
+const { services, home } = await getCatalog();
+const base = import.meta.env.BASE_URL;
+---
+<BaseLayout home={home} title="Services | ALON-PH" description="Event support and custom services — photobooth and more.">
+  <section class="services-hero">
+    <div class="container">
+      <h1>Other Services</h1>
+      <p>Event support &amp; custom services. Inquire for details, packages, and a quote.</p>
+    </div>
+  </section>
+
+  <div class="container services-body">
+    {services.length === 0 ? (
+      <p class="empty">Services are being added soon. Please check back or send us an inquiry.</p>
+    ) : (
+      <div class="services-grid">
+        {services.map((s) => {
+          const real = [s.image, ...s.gallery].filter(Boolean);
+          const cover = real[0] || placeholderImage(`${s.tags} ${s.name} service`, s.name);
+          const url = `${base}services/${s.slug}/`;
+          return (
+            <article class="scard">
+              <a class="scard__main" href={url} aria-label={`View ${s.name}`}>
+                <img class="scard__img" src={cover} alt={s.name} loading="lazy" />
+                {s.featured && <span class="badge">Featured</span>}
+                {real.length > 1 && <span class="count">+{real.length - 1} photos</span>}
+              </a>
+              <div class="scard__body">
+                <h2><a href={url}>{s.name}</a></h2>
+                {s.desc && <p class="muted">{s.desc}</p>}
+                <div class="scard__actions">
+                  <a class="button button-outline sm" href={url}>View details</a>
+                  <button class="button button-primary sm" data-add-service data-id={`service:${s.id}`} data-name={s.name}><span set:html={uiIcon("addList", 15)} /> Add to Inquiry</button>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    )}
+  </div>
+</BaseLayout>
+
+<script>
+  import { addItem } from "../../scripts/inquiry.js";
+  // Add service to inquiry (brief confirmation that reverts)
+  document.querySelectorAll("[data-add-service]").forEach((btn) => btn.addEventListener("click", () => {
+    if (btn.dataset.busy) return;
+    addItem({ id: btn.dataset.id, productName: btn.dataset.name, variantName: "Service inquiry", qty: 1 });
+    const original = btn.dataset.label || (btn.dataset.label = btn.innerHTML);
+    btn.dataset.busy = "1";
+    btn.classList.add("is-added");
+    btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg> Added to Inquiry';
+    setTimeout(() => { btn.innerHTML = original; btn.classList.remove("is-added"); delete btn.dataset.busy; }, 1400);
+  }));
+</script>
+
+<style>
+  .services-hero { padding: 40px 0 22px; background: linear-gradient(105deg,#fff8df,#ffe7c5); }
+  .services-hero h1 { margin: 0 0 6px; font-size: clamp(1.6rem,3vw,2.3rem); }
+  .services-hero p { margin: 0; color: #555; }
+  .services-body { padding: 28px 0 10px; }
+  .services-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); }
+  .scard { border: 1px solid var(--line); border-radius: 16px; background: #fff; overflow: hidden; box-shadow: var(--shadow); display: flex; flex-direction: column; }
+  .scard__main { position: relative; display: block; aspect-ratio: 16/10; overflow: hidden; background: linear-gradient(140deg,#fff6ec,#ffe9d6); }
+  .scard__img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
+  .scard__main:hover .scard__img { transform: scale(1.03); }
+  .badge { position: absolute; top: 10px; left: 10px; padding: 4px 8px; border-radius: 6px; background: var(--brand); color: #fff; font-size: .62rem; font-weight: 800; }
+  .count { position: absolute; bottom: 10px; right: 10px; padding: 3px 9px; border-radius: 999px; background: rgba(0,0,0,.55); color: #fff; font-size: .68rem; font-weight: 700; }
+  .scard__body { padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .scard__body h2 { margin: 0; font-size: 1.15rem; }
+  .scard__body .muted { margin: 0; font-size: .88rem; flex: 1; }
+  .scard__actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .button.sm { min-height: 38px; padding: 8px 14px; font-size: .82rem; }
+  .button.is-added { background: #1c7a4b; border-color: #1c7a4b; color: #fff; }
+  .empty { padding: 50px 0; text-align: center; color: var(--muted); }
+</style>

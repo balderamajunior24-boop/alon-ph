@@ -1,0 +1,108 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ProductCard from "../../components/ProductCard.astro";
+import { getCatalog } from "../../lib/catalog.js";
+
+const { categories, products, home } = await getCatalog();
+const categoryById = new Map(categories.map((category) => [category.id, category]));
+---
+<BaseLayout home={home} title="Catalog | ALON-PH" description="Browse customized event kits, merchandise, and giveaways.">
+  <section class="catalog-hero">
+    <div class="container">
+      <h1>Product Catalog</h1>
+      <p>Browse our range, choose your options, and add items to your inquiry list for a quote.</p>
+    </div>
+  </section>
+
+  <div class="container catalog-body">
+    <div class="toolbar">
+      <input id="search" type="search" class="search" placeholder="Search products, tags…" aria-label="Search products" />
+      <div class="chips" role="group" aria-label="Filter by category">
+        <button class="chip chip--active" type="button" data-cat="all" aria-pressed="true">All</button>
+        {categories.map((c) => <button class="chip" type="button" data-cat={c.slug || c.id} aria-pressed="false">{c.name}</button>)}
+      </div>
+    </div>
+
+    <p id="count" class="count muted"></p>
+
+    <div class="grid" id="grid">
+      {products.map((p) => (
+        <div class="cell" data-cat-id={p.categoryId} data-cat-slug={categoryById.get(p.categoryId)?.slug || ""} data-search={`${p.name} ${p.desc} ${p.tags}`.toLowerCase()}>
+          <ProductCard product={p} />
+        </div>
+      ))}
+    </div>
+    <p id="empty" class="empty" hidden>No products match your filter.</p>
+  </div>
+</BaseLayout>
+
+<script>
+  const chips = [...document.querySelectorAll(".chip")];
+  const cells = [...document.querySelectorAll(".cell")];
+  const search = document.querySelector("#search");
+  const empty = document.querySelector("#empty");
+  const count = document.querySelector("#count");
+  let activeCat = new URLSearchParams(location.search).get("cat") || "all";
+  let query = "";
+
+  function apply() {
+    let shown = 0;
+    cells.forEach((cell) => {
+      const okCat = activeCat === "all" || cell.dataset.catId === activeCat || cell.dataset.catSlug === activeCat;
+      const okQ = !query || cell.dataset.search.includes(query);
+      const show = okCat && okQ;
+      cell.style.display = show ? "" : "none";
+      if (show) shown++;
+    });
+    empty.hidden = shown !== 0;
+    count.textContent = `${shown} item${shown === 1 ? "" : "s"}`;
+  }
+
+  chips.forEach((chip) => chip.addEventListener("click", () => {
+    chips.forEach((c) => c.classList.remove("chip--active"));
+    chips.forEach((c) => c.setAttribute("aria-pressed", "false"));
+    chip.classList.add("chip--active");
+    chip.setAttribute("aria-pressed", "true");
+    activeCat = chip.dataset.cat;
+    const url = new URL(location.href);
+    activeCat === "all" ? url.searchParams.delete("cat") : url.searchParams.set("cat", activeCat);
+    history.replaceState(null, "", url);
+    apply();
+  }));
+  search.addEventListener("input", (e) => { query = e.target.value.toLowerCase(); apply(); });
+
+  // Sync active chip from URL param on load.
+  const initial = chips.find((c) => c.dataset.cat === activeCat);
+  if (initial) {
+    chips.forEach((c) => { c.classList.remove("chip--active"); c.setAttribute("aria-pressed", "false"); });
+    initial.classList.add("chip--active");
+    initial.setAttribute("aria-pressed", "true");
+  } else {
+    activeCat = "all";
+  }
+  apply();
+</script>
+
+<style>
+  .catalog-hero { padding: 40px 0 22px; background: linear-gradient(105deg,#fff8df,#ffe7c5); }
+  .catalog-hero h1 { margin: 0 0 6px; font-size: clamp(1.6rem,3vw,2.3rem); }
+  .catalog-hero p { margin: 0; color: #555; }
+  .catalog-body { padding: 24px 0 10px; }
+  .toolbar { position: sticky; top: 82px; z-index: 10; padding: 12px 0; background: #fff; }
+  .search { width: 100%; max-width: 460px; padding: 11px 14px; border: 1px solid #d8cec7; border-radius: 10px; background: #fff; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .chip { border: 1px solid var(--line); background: #fff; padding: 7px 13px; border-radius: 999px; cursor: pointer; font-size: .8rem; transition: .15s; }
+  .chip:hover { border-color: var(--brand); }
+  .chip--active { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .count { margin: 4px 0 14px; font-size: .82rem; }
+  .grid { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 16px; }
+  @media(max-width:1000px){ .grid { grid-template-columns: repeat(3,1fr); } .toolbar { top: 70px; } }
+  @media(max-width:680px){
+    .grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 11px; }
+    .toolbar { top: 64px; margin-inline: -14px; padding: 10px 14px 8px; box-shadow: 0 8px 14px rgba(52,35,24,.05); }
+    .chips { flex-wrap: nowrap; overflow-x: auto; margin-inline: -14px; padding: 0 14px 5px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { flex: 0 0 auto; min-height: 38px; }
+  }
+  .empty { padding: 40px 0; text-align: center; color: var(--muted); }
+</style>
