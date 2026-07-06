@@ -57,6 +57,11 @@ function parseAttributes(s) {
   return out;
 }
 
+// Build a displayable URL from a Drive file ID. Uses the `thumbnail` endpoint,
+// which is not rate-limited like lh3.googleusercontent.com. sz=w1000 keeps it
+// sharp on large gallery views.
+const driveUrlFromId = (id) => `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+
 // Accepts a bare Google Drive file ID (preferred), a full Drive share link,
 // an lh3.googleusercontent.com link, or any direct image URL — and returns a
 // displayable image URL. Empty input returns "" (caller shows a placeholder).
@@ -67,13 +72,13 @@ export function driveImage(input) {
   // Pull an ID out of a known Drive/Google URL shape…
   const m =
     v.match(/\/file\/d\/([A-Za-z0-9_-]+)/) ||   // .../file/d/<ID>/view
-    v.match(/[?&]id=([A-Za-z0-9_-]+)/) ||        // ...?id=<ID>
+    v.match(/[?&]id=([A-Za-z0-9_-]+)/) ||        // ...?id=<ID>  (thumbnail links too)
     v.match(/googleusercontent\.com\/d\/([A-Za-z0-9_-]+)/); // lh3.../d/<ID>
-  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
+  if (m) return driveUrlFromId(m[1]);
 
   // …otherwise, if it's a bare ID (no scheme, no slashes/spaces, Drive-ID chars).
   if (!/[/\s]/.test(v) && !/^https?:/i.test(v) && /^[A-Za-z0-9_-]{20,}$/.test(v)) {
-    return `https://lh3.googleusercontent.com/d/${v}`;
+    return driveUrlFromId(v);
   }
 
   // Already a usable URL (e.g. an external image link).
