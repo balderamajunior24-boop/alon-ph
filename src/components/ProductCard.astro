@@ -35,17 +35,18 @@ const defaultMoq = Math.max(1, Number(product.variants[0]?.attributes?.moq) || 1
   .product-card { position: relative; min-width: 0; padding: 9px 9px 10px; border: 1px solid #ece9e6; border-radius: 12px; background: #fff; box-shadow: 0 4px 13px rgba(44,43,42,.09); text-align: center; }
   .badge { position: absolute; z-index: 3; top: 8px; left: 8px; display: inline-flex; padding: 4px 7px; border-radius: 5px; color: white; font-size: .58rem; font-weight: 800; }
   .quote-based { background: #ed6a16; } .min-order { background: #27965d; }
-  .product-art { position: relative; display: grid; height: 178px; overflow: hidden; place-items: center; border-radius: 8px; background: linear-gradient(140deg,#fffdf9,#f8f5f0); }
+  .product-art { position: relative; display: grid; aspect-ratio: 1 / 1; overflow: hidden; place-items: center; border-radius: 8px; background: linear-gradient(140deg,#fffdf9,#f8f5f0); }
   .product-art img { width: 100%; height: 100%; object-fit: cover; }
   .product-art .ph { color: #d6cfc7; font-size: 3rem; }
   h3 { min-height: 34px; margin: 9px 0 3px; font-size: .82rem; line-height: 1.3; }
   .price { margin: 0 0 7px; color: var(--brand); font-size: .78rem; font-weight: 750; }
   .price.muted { color: var(--muted); font-weight: 600; }
-  .card-action { display: flex; width: 100%; min-height: 29px; align-items: center; justify-content: center; margin-top: 6px; border-radius: 5px; font-size: .65rem; font-weight: 750; cursor: pointer; }
+  .card-action { display: flex; width: 100%; min-height: 38px; align-items: center; justify-content: center; gap: 4px; margin-top: 6px; border-radius: 7px; font-size: .7rem; font-weight: 750; cursor: pointer; }
   .primary { background: var(--brand); color: #fff; }
   .secondary { border: 1px solid #efcbb8; background: white; color: #474747; transition: background .15s, color .15s, border-color .15s; }
   .secondary:hover { background: #fff5ef; }
   .card-action.is-added { background: #1c7a4b; border-color: #1c7a4b; color: #fff; }
+  @media(max-width:420px){.product-card{padding:7px}.badge{top:6px;left:6px;max-width:calc(100% - 12px)}h3{font-size:.77rem}.card-action{min-height:40px;font-size:.67rem}}
 </style>
 <script>
   import { addItem } from "../scripts/inquiry.js";

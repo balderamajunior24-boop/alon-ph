@@ -2,22 +2,22 @@
  * does nothing (Windows with no mail app, shared PCs, phones without a default
  * mail client). Instead of blindly firing mailto:, we open a small chooser:
  *
- *   1. Gmail (web compose)   — works for anyone with a Google account
- *   2. Outlook (web compose) — works for Outlook/Hotmail/Live users
- *   3. Default mail app      — the classic mailto: (best when it works)
- *   4. Copy details          — copies subject+body so they can paste anywhere
+ *   1. Gmail web compose, for Google accounts
+ *   2. Outlook web compose, for Outlook, Hotmail, and Live accounts
+ *   3. The device's default mail app
+ *   4. Copy details, ready to paste elsewhere
  *
  * The composed email is always visible so nothing is lost even if every
  * mail option fails.
  */
 
-const SUBJECT = "ALOK inquiry — quotation request";
+const SUBJECT = "ALOK quotation request";
 
 export function buildBody(items) {
   const lines = ["Hi ALOK,", "", "I'd like to request a quotation for the following:", ""];
   items.forEach((it, i) => {
     lines.push(
-      `${i + 1}. ${it.productName}${it.variantName ? " — " + it.variantName : ""}`,
+      `${i + 1}. ${it.productName}${it.variantName ? ": " + it.variantName : ""}`,
       `   Qty: ${it.qty}${it.note ? "\n   Note: " + it.note : ""}`
     );
   });
@@ -99,7 +99,7 @@ export function sendInquiry(email, items) {
   const status = el.querySelector("[data-status]");
   status.textContent = "";
 
-  // "Use my email app" — try mailto:, but detect if nothing happened.
+  // Try mailto, then detect whether the page stayed visible.
   mailLink.onclick = (e) => {
     e.preventDefault();
     const before = Date.now();
@@ -147,7 +147,7 @@ export function installMailtoFallback() {
     const url = new URL(a.href);
     const email = decodeURIComponent(url.pathname);
     const params = url.searchParams;
-    const subject = params.get("subject") || "Inquiry — ALOK";
+    const subject = params.get("subject") || "ALOK inquiry";
     const body = params.get("body") || "";
     const before = Date.now();
     // Let the native mailto attempt fire, then check if we're still here.

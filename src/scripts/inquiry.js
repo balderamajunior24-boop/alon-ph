@@ -1,4 +1,4 @@
-/* Client-side inquiry list — shared across pages.
+/* Client-side inquiry list shared across pages.
  * Stored in localStorage; a custom "inquiry:changed" event keeps the
  * header badge and drawer in sync.
  */

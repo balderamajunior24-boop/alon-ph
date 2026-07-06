@@ -10,14 +10,14 @@ const minimums = Object.fromEntries(products.flatMap((p) => p.variants.map((v) =
 <div id="inquiry-overlay" class="overlay" hidden></div>
 <aside id="inquiry-drawer" class="drawer" aria-hidden="true" aria-label="Inquiry list" role="dialog" aria-modal="true" inert>
   <div class="drawer__head">
-    <div><span class="eyebrow">QUOTE REQUEST</span><h2>Your Inquiry List <b data-inquiry-count-pill>0</b></h2></div>
+    <div><span class="eyebrow">YOUR PICKS</span><h2>Inquiry list <b data-inquiry-count-pill>0</b></h2></div>
     <button id="drawer-close" class="icon-btn" aria-label="Close"><span set:html={uiIcon("close", 18)} /></button>
   </div>
 
   <div id="drawer-body" class="drawer__body"></div>
 
   <div class="drawer__foot">
-    <p class="hint">Inquiries are sent by email first — we reply with pricing &amp; lead time.</p>
+    <p class="hint">Send us your list by email. We will reply with prices and lead time.</p>
     <div class="foot-actions">
       <button id="drawer-send" class="button button-primary block" disabled><span set:html={uiIcon("mail", 17)} /> Send by email</button>
       <a class="button button-outline block" href={`${base}inquiry/`}>Open full list <span set:html={uiIcon("arrowRight", 16)} /></a>
@@ -39,6 +39,7 @@ const minimums = Object.fromEntries(products.flatMap((p) => p.variants.map((v) =
   const sendBtn = document.querySelector("#drawer-send");
   const clearBtn = document.querySelector("#drawer-clear");
   let returnFocus = null;
+  let overlayTimer = 0;
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 
@@ -90,6 +91,7 @@ const minimums = Object.fromEntries(products.flatMap((p) => p.variants.map((v) =
   }
 
   function open() {
+    clearTimeout(overlayTimer);
     render();
     returnFocus = document.activeElement;
     drawer.inert = false;
@@ -97,17 +99,18 @@ const minimums = Object.fromEntries(products.flatMap((p) => p.variants.map((v) =
     overlay.hidden = false;
     requestAnimationFrame(() => overlay.classList.add("show"));
     drawer.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
+    document.body.classList.add("drawer-open");
     document.querySelector("#drawer-close").focus();
   }
   function close() {
+    const focusTarget = returnFocus?.isConnected && returnFocus.getClientRects?.().length ? returnFocus : document.querySelector(".menu-toggle, .inquiry");
+    focusTarget?.focus?.();
     drawer.classList.remove("open");
     overlay.classList.remove("show");
     drawer.setAttribute("aria-hidden", "true");
     drawer.inert = true;
-    document.body.style.overflow = "";
-    setTimeout(() => (overlay.hidden = true), 220);
-    returnFocus?.focus?.();
+    document.body.classList.remove("drawer-open");
+    overlayTimer = setTimeout(() => { if (!drawer.classList.contains("open")) overlay.hidden = true; }, 220);
   }
 
   // Header button opens the drawer (intercept its link).
@@ -116,7 +119,7 @@ const minimums = Object.fromEntries(products.flatMap((p) => p.variants.map((v) =
   overlay.addEventListener("click", close);
   document.addEventListener("keydown", (e) => {
     if (!drawer.classList.contains("open")) return;
-    if (e.key === "Escape") close();
+    if (e.key === "Escape") { close(); return; }
     if (e.key === "Tab") {
       const focusable = [...drawer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')];
       const first = focusable[0];
@@ -142,14 +145,14 @@ const minimums = Object.fromEntries(products.flatMap((p) => p.variants.map((v) =
   .overlay.show { opacity: 1; }
   .drawer { position: fixed; top: 0; right: 0; z-index: 70; display: flex; flex-direction: column; width: min(460px, 100vw); height: 100dvh; background: #fff; box-shadow: -12px 0 40px rgba(60,30,12,.22); transform: translateX(100%); transition: transform .24s ease; }
   .drawer.open { transform: translateX(0); }
-  .drawer__head { display: flex; align-items: center; justify-content: space-between; padding: 20px 22px 17px; border-bottom: 1px solid var(--line); background: linear-gradient(120deg,#fff,#fff8f2); }
+  .drawer__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: max(20px,env(safe-area-inset-top)) 22px 17px; border-bottom: 1px solid var(--line); background: linear-gradient(120deg,#fff,#fff8df); }
   .eyebrow { display: block; margin-bottom: 3px; color: var(--brand); font-size: .62rem; font-weight: 850; letter-spacing: .13em; }
   .drawer__head h2 { margin: 0; font-size: 1.18rem; display: flex; align-items: center; gap: 9px; }
   .drawer__head b { display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--brand); color: #fff; font-size: .72rem; }
-  .icon-btn { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 9px; background: #fff; cursor: pointer; color: var(--ink); }
+  .icon-btn { flex: 0 0 auto; display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 9px; background: #fff; cursor: pointer; color: var(--ink); line-height: 1; }
   .icon-btn:hover { background: #fff5ef; }
   .icon-btn.sm { width: 30px; height: 30px; color: #b3261e; }
-  .drawer__body { flex: 1; overflow-y: auto; padding: 16px 18px; background: #fdfbf9; }
+  .drawer__body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 18px; background: #fdfbf9; }
   :global(.drawer .line) { display: grid; grid-template-columns: 42px 1fr; gap: 4px 11px; margin-bottom: 10px; padding: 13px; border: 1px solid #eadfd7; border-radius: 13px; background: #fff; box-shadow: 0 3px 10px rgba(53,35,24,.04); }
   :global(.drawer .line__mark) { display: grid; width: 42px; height: 42px; grid-row: 1 / 3; place-items: center; border-radius: 10px; background: #fff0e5; color: var(--brand); font-weight: 850; }
   :global(.drawer .line__info) { min-width: 0; display: flex; flex-direction: column; }
@@ -173,4 +176,15 @@ const minimums = Object.fromEntries(products.flatMap((p) => p.variants.map((v) =
   .block { width: 100%; }
   .link-clear { display: block; margin: 12px auto 0; padding: 4px; border: 0; background: none; color: #b3261e; font-size: .8rem; cursor: pointer; }
   .link-clear:hover { text-decoration: underline; }
+  @media (max-width: 420px) {
+    .drawer__head { padding-inline: 16px; }
+    .drawer__body { padding: 12px; }
+    .drawer__foot { padding-inline: 14px; }
+    :global(.drawer .line) { grid-template-columns: 36px minmax(0,1fr); gap: 5px 9px; padding: 11px; }
+    :global(.drawer .line__mark) { width: 36px; height: 36px; }
+    :global(.drawer .line__actions) { align-items: flex-end; flex-direction: column; gap: 4px; }
+    :global(.drawer .stepper) { align-self: stretch; }
+    :global(.drawer .stepper button) { flex: 1; min-width: 34px; }
+    :global(.drawer .qty) { flex: 1; min-width: 45px; }
+  }
 </style>

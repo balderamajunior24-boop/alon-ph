@@ -22,9 +22,9 @@ const features = (home.photobooth_features || "")
   </div>
 </section>
 <style>
-  .photo-section { padding: 18px 0 52px; }
-  .promo { display: grid; grid-template-columns: 35% 65%; min-height: 240px; overflow: hidden; border-radius: 15px; background: linear-gradient(105deg,#fff0df,#ffe2c6); }
-  .promo-copy { padding: 30px 38px; }
+  .photo-section { padding: 26px 0 64px; }
+  .promo { display: grid; grid-template-columns: 38% 62%; min-height: 260px; overflow: hidden; border-top: 5px solid var(--brand); background: #f5efe6; }
+  .promo-copy { padding: 34px 40px; }
   .promo h2 { margin: 0; font-size: 1.6rem; line-height: 1.2; }
   .promo p { margin: 2px 0 13px; }
   .promo ul { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px 18px; padding: 0; list-style: none; font-size: .75rem; }
@@ -39,6 +39,6 @@ const features = (home.photobooth_features || "")
   .booth b { position: absolute; z-index: 3; right: 30%; bottom: 22px; color: white; font-size: 1.7rem; }
   .lamp { position: absolute; z-index: 3; top: 15px; width: 42px; height: 42px; border-radius: 50%; background: #fff; box-shadow: 0 0 18px white; } .lamp:after { position: absolute; top: 39px; left: 19px; width: 4px; height: 130px; background: #202020; content: ''; } .lamp.one { left: 16%; } .lamp.two { right: 7%; }
   .booth em { position: absolute; right: 5%; bottom: 0; width: 65%; height: 28px; background: #303030; }
-  @media(max-width:800px){.promo{grid-template-columns:1fr}.photo-collage{min-height:240px;padding:14px 20px}.promo-copy{padding:28px}}
-  @media(max-width:500px){.promo ul{grid-template-columns:1fr}.booth{width:100%}}
+  @media(max-width:960px){.promo{grid-template-columns:1fr}.photo-collage{min-height:240px;padding:14px 20px}.promo-copy{padding:28px}}
+  @media(max-width:500px){.promo ul{grid-template-columns:1fr}.photo-collage{padding:12px}.strips{display:none}.booth{width:100%}.promo-copy{padding:24px 20px}}
 </style>

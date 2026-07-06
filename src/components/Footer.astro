@@ -17,18 +17,18 @@ const socials = [
   <div class="container footer-grid">
     <div class="footer-brand">
       <a class="logo" href={base}><i aria-hidden="true">A</i><span><b>ALOK</b><small>BRIGHT CREATION FOR CHOSEN MOMENTS</small></span></a>
-      <p>Your one-stop partner for customized event kits, branded merchandise, giveaways, photobooth and event support services.</p>
+      <p>Custom event kits, branded merchandise, giveaways, photobooth packages, and hands-on event support.</p>
       <div class="socials" aria-label="Social links">{socials.map((s) => <a href={s.url} target="_blank" rel="noopener" aria-label={s.name} set:html={uiIcon(s.icon, 14)} />)}</div>
     </div>
     <div><h2>Quick Links</h2><a href={`${base}catalog/`}>Catalog</a><a href={`${base}services/`}>Services</a><a href={`${base}inquiry/`}>Inquiry List</a></div>
     <div><h2>Customer Care</h2><a href={`${base}catalog/`}>How to Order</a><a href={`mailto:${email}`}>Shipping & Delivery</a><a href={`mailto:${email}`}>Returns & Refunds</a><a href={`mailto:${email}`}>Terms & Conditions</a></div>
     <div class="contact"><h2>Contact Us</h2><p><i set:html={uiIcon("phone", 15)} />{phone}</p><p><i set:html={uiIcon("mail", 15)} /><a href={`mailto:${email}`}>{email}</a></p><p><i set:html={uiIcon("pin", 15)} /><span>{location}<br/>We deliver nationwide!</span></p></div>
-    <div><h2>Follow Us</h2><div class="socials dark">{socials.map((s) => <a href={s.url} target="_blank" rel="noopener" aria-label={s.name} set:html={uiIcon(s.icon, 14)} />)}</div><p>Stay updated on Facebook<br/>for promos and new products.</p></div>
+    <div><h2>Follow Us</h2><div class="socials dark">{socials.map((s) => <a href={s.url} target="_blank" rel="noopener" aria-label={s.name} set:html={uiIcon(s.icon, 14)} />)}</div><p>Follow us for new products,<br/>recent projects, and promos.</p></div>
   </div>
   <div class="container copyright">© {new Date().getFullYear()} ALOK. All Rights Reserved.</div>
 </footer>
 <style>
-  .footer { margin-top: 48px; padding: 55px 0 20px; background: linear-gradient(120deg,#fffaf4,#fff5eb); font-size: .84rem; }
+  .footer { margin-top: 48px; padding: 55px 0 20px; border-top:1px solid #ded8cf; background: #f7f4ee; font-size: .84rem; }
   .footer-grid { display: grid; grid-template-columns: 1.45fr .8fr .95fr 1.1fr 1.15fr; gap: 45px; }
   .footer-grid h2 { margin: 5px 0 17px; font-size: .94rem; }
   .footer-grid > div > a { display: block; margin: 10px 0; color: #41464a; }
@@ -37,8 +37,9 @@ const socials = [
   .logo { display: flex; align-items: center; gap: 8px; color: var(--brand); }
   .logo i { font-size: 2.25rem; font-weight: 900; transform: skew(-12deg); }
   .logo b, .logo small { display: block; }.logo b { font-size: 1.2rem; }.logo small { color: var(--ink); font-size: .47rem; font-weight: 800; }
-  .socials { display: flex; gap: 12px; margin-top: 22px; }.socials a { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 50%; background: var(--brand); color: white; font-size: .7rem; font-weight: 800; }
-  .socials.dark { margin: 0 0 19px; }.socials.dark a { border-radius: 5px; background: var(--ink); }
+  .socials { display: flex; gap: 8px; margin-top: 22px; }.socials a { display: grid; width: 30px; height: 30px; place-items: center; border:1px solid #d8cbbb; background: transparent; color: var(--ink); font-size: .7rem; font-weight: 800; transition:background .18s,color .18s; }
+  .socials a:hover { background:var(--brand); color:var(--ink); }
+  .socials.dark { margin: 0 0 19px; }.socials.dark a { background: var(--ink); color:white; }
   .contact p { display:flex;align-items:flex-start;gap:8px; } .contact i { display:flex;margin-top:4px;color:var(--brand);font-style:normal; }
   .copyright { margin-top: 42px; padding-top: 17px; border-top: 1px solid #efdccc; text-align: center; color: #5b5b5b; }
   @media(max-width:900px){.footer-grid{grid-template-columns:repeat(2,1fr)}.footer-brand{grid-column:1/-1;max-width:440px}}

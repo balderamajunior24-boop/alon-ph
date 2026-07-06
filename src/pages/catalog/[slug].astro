@@ -106,17 +106,18 @@ const related = products
 
           <label class="field">
             <span>Quantity</span>
-            <input id="qty" type="number" min="1" value={firstMoq} />
+            <input id="qty" type="number" min={firstMoq} value={firstMoq} />
+            <small id="qty-hint" class="qty-hint muted"></small>
           </label>
 
           <label class="field">
             <span>Notes (optional)</span>
-            <textarea id="note" rows="3" placeholder="Event date, colors, print details…"></textarea>
+            <textarea id="note" rows="3" placeholder="Event date, colors, print details"></textarea>
           </label>
 
           <button type="submit" class="button button-primary block"><span set:html={uiIcon("addList", 17)} /> Add to Inquiry List</button>
           <p id="status" class="status" role="status" aria-live="polite"></p>
-          <p class="hint muted">No instant checkout — we reply to your inquiry with a quotation.</p>
+          <p class="hint muted">We will review your request and reply with a quotation.</p>
         </form>
       </section>
     </div>
@@ -146,9 +147,11 @@ const related = products
   const thumbs = [...document.querySelectorAll(".thumb")];
   const variantInputs = [...document.querySelectorAll('input[name="variant"]')];
   const qty = document.querySelector("#qty");
+  const qtyHint = document.querySelector("#qty-hint");
   const priceEl = document.querySelector("#price");
   const moqEl = document.querySelector("#moq");
   const status = document.querySelector("#status");
+  let currentMin = 1;
 
   function currentVariantId() {
     return variantInputs.find((input) => input.checked)?.value || document.querySelector("#variant")?.value || Object.keys(variantData)[0];
@@ -164,26 +167,46 @@ const related = products
     const v = variantData[currentVariantId()];
     if (!v) return;
     priceEl.textContent = v.price ? `from ₱${v.price}` : "Quote on inquiry";
+    currentMin = Math.max(1, Number(v.moq) || 1);
     moqEl.textContent = v.moq ? `Min order: ${v.moq} pcs` : "";
-    if (v.moq) qty.value = v.moq;
+    // Enforce the minimum on the input itself so it can't be lowered below MOQ.
+    qty.min = currentMin;
+    qty.value = Math.max(currentMin, parseInt(qty.value, 10) || currentMin);
+    qtyHint.textContent = currentMin > 1 ? `Minimum order: ${currentMin} pcs` : "";
     if (v.image) selectThumb(v.image);
   }
   variantInputs.forEach((input) => input.addEventListener("change", syncVariant));
+
+  // Clamp back up if the user types/spins below the minimum.
+  function clampQty() {
+    const n = parseInt(qty.value, 10);
+    if (!Number.isFinite(n) || n < currentMin) {
+      qty.value = currentMin;
+      qtyHint.textContent = `Minimum order is ${currentMin} pcs`;
+    } else {
+      qtyHint.textContent = currentMin > 1 ? `Minimum order: ${currentMin} pcs` : "";
+    }
+  }
+  qty.addEventListener("change", clampQty);
+  qty.addEventListener("blur", clampQty);
+
   syncVariant();
 
   document.querySelector("#customize").addEventListener("submit", (e) => {
     e.preventDefault();
+    clampQty();
     const id = currentVariantId();
     const v = variantData[id];
+    const minQty = Math.max(1, Number(v?.moq) || 1);
     addItem({
       id,
       productName,
       variantName: v?.name || "",
-      qty: Math.max(1, parseInt(qty.value, 10) || 1),
-      minQty: Math.max(1, Number(v?.moq) || 1),
+      qty: Math.max(minQty, parseInt(qty.value, 10) || minQty),
+      minQty,
       note: document.querySelector("#note").value,
     });
-    status.textContent = "Added to your inquiry list. Open it from the header when ready.";
+    status.textContent = "Added to your inquiry list. You can keep browsing or review your list.";
   });
 </script>
 
@@ -191,7 +214,7 @@ const related = products
   .detail { width: min(calc(100% - 40px), 1320px); padding: 22px 0 10px; }
   .crumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; color: var(--muted); font-size: .82rem; }
   .crumbs a:hover { color: var(--brand); }
-  .detail-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(560px, 1.1fr); gap: 34px; align-items: start; }
+  .detail-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 34px; align-items: start; }
   .gallery { min-width: 0; }
   .main { display: grid; min-height: 420px; place-items: center; overflow: hidden; border: 1px solid #f2ddce; border-radius: 18px; background: #fff8f1; }
   .main img { width: 100%; height: 100%; max-height: 520px; object-fit: contain; }
@@ -231,8 +254,15 @@ const related = products
   .rel-img { display: grid; height: 120px; place-items: center; overflow: hidden; border-radius: 8px; background: linear-gradient(140deg,#fffdf9,#f8f5f0); }
   .rel-img img { width: 100%; height: 100%; object-fit: cover; } .rel-img span { color: #d6cfc7; font-size: 2rem; }
   .rel-card strong { display: block; margin-top: 8px; font-size: .78rem; }
-  @media(max-width:1100px){ .detail-grid { grid-template-columns: minmax(0,1fr) minmax(480px,1fr); } .variant-options { grid-template-columns: repeat(3,minmax(0,1fr)); } }
-  @media(max-width:860px){ .detail { width: min(calc(100% - 28px), 1320px); } .detail-grid { grid-template-columns: 1fr; } .variant-options { max-height: 208px; grid-template-columns: repeat(4,minmax(0,1fr)); } .rel-grid { grid-template-columns: repeat(2,1fr); } .main { min-height: 300px; } }
-  @media(max-width:600px){ .variant-options { grid-template-columns: repeat(3,minmax(0,1fr)); } }
-  @media(max-width:480px){ .panel { padding: 16px; } .variant-options { max-height: 208px; grid-template-columns: repeat(2,minmax(0,1fr)); } .main { min-height: 250px; } }
+  @media(max-width:1100px){ .variant-options { grid-template-columns: repeat(3,minmax(0,1fr)); } .rel-grid{grid-template-columns:repeat(3,1fr)} }
+  @media(max-width:960px){ .detail { width: min(calc(100% - 28px), 1320px); } .detail-grid { grid-template-columns: 1fr; } .variant-options { max-height: 208px; grid-template-columns: repeat(4,minmax(0,1fr)); } .rel-grid { grid-template-columns: repeat(2,1fr); } .main { min-height: 300px; } }
+  @media(max-width:600px){
+    .detail { width: min(calc(100% - 24px), 1320px); padding-top: 14px; }
+    .crumbs { gap: 6px; margin-bottom: 12px; }
+    .detail-grid { gap: 22px; }
+    .variant-options { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .pricing { flex-wrap: wrap; gap: 6px 14px; }
+    .related { margin-top: 34px; }
+  }
+  @media(max-width:480px){ .panel { padding: 16px; } .variant-options { max-height: 240px; } .main { min-height: 250px; } }
 </style>

@@ -1,4 +1,4 @@
-/* Catalog data layer — runs at BUILD time (server-side) in Astro.
+/* Catalog data layer. Runs at BUILD time (server-side) in Astro.
  * Fetches Categories / Products / Variants from Google Sheets and joins them.
  * If SHEET_API_KEY is missing, falls back to sample data so `npm run dev`
  * works out of the box.
@@ -11,7 +11,7 @@ const SHEET_ID = clean(process.env.SHEET_ID);
 const SHEET_API_KEY = clean(process.env.SHEET_API_KEY);
 
 // Tab names: use the env value ONLY if it's non-empty, else the default.
-// (CI can pass an empty string from an unset secret — `= default` in
+// (CI can pass an empty string from an unset secret. `= default` in
 //  destructuring only applies to `undefined`, not "", so guard explicitly.)
 const tab = (v, fallback) => (clean(v) || fallback);
 const TAB_CATEGORIES = tab(process.env.TAB_CATEGORIES, "Categories");
@@ -57,11 +57,27 @@ function parseAttributes(s) {
   return out;
 }
 
-export function driveImage(url) {
-  if (!url) return "";
-  const m = url.match(/\/file\/d\/([^/]+)/) || url.match(/[?&]id=([^&]+)/);
-  if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w800`;
-  return url;
+// Accepts a bare Google Drive file ID (preferred), a full Drive share link,
+// an lh3.googleusercontent.com link, or any direct image URL — and returns a
+// displayable image URL. Empty input returns "" (caller shows a placeholder).
+export function driveImage(input) {
+  const v = String(input || "").trim();
+  if (!v) return "";
+
+  // Pull an ID out of a known Drive/Google URL shape…
+  const m =
+    v.match(/\/file\/d\/([A-Za-z0-9_-]+)/) ||   // .../file/d/<ID>/view
+    v.match(/[?&]id=([A-Za-z0-9_-]+)/) ||        // ...?id=<ID>
+    v.match(/googleusercontent\.com\/d\/([A-Za-z0-9_-]+)/); // lh3.../d/<ID>
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
+
+  // …otherwise, if it's a bare ID (no scheme, no slashes/spaces, Drive-ID chars).
+  if (!/[/\s]/.test(v) && !/^https?:/i.test(v) && /^[A-Za-z0-9_-]{20,}$/.test(v)) {
+    return `https://lh3.googleusercontent.com/d/${v}`;
+  }
+
+  // Already a usable URL (e.g. an external image link).
+  return /^https?:/i.test(v) ? v : "";
 }
 
 // Parse a comma-separated list of Drive links into an array of view URLs.
@@ -202,7 +218,7 @@ export async function getCatalog() {
 
   if (!SHEET_API_KEY || SHEET_API_KEY === "PUT_YOUR_API_KEY_HERE") {
     console.warn(
-      "[catalog] No SHEET_API_KEY set — using sample data. Add .env to load your sheet."
+      "[catalog] No SHEET_API_KEY set. Using sample data. Add .env to load your sheet."
     );
     cache = { ...normalizeSample(SAMPLE), usingSample: true };
     return cache;
@@ -217,7 +233,7 @@ export async function getCatalog() {
       fetchTab(TAB_CATEGORIES),
       fetchTab(TAB_PRODUCTS),
       fetchTab(TAB_VARIANTS),
-      // Services & Home tabs are optional — missing tab = empty, not an error.
+      // Services and Home tabs are optional. A missing tab is empty, not an error.
       fetchTab(TAB_SERVICES).catch(optional(TAB_SERVICES)),
       fetchTab(TAB_HOME).catch(optional(TAB_HOME)),
     ]);
@@ -228,12 +244,12 @@ export async function getCatalog() {
     // production build, fail loudly instead of silently shipping sample data
     // (that's how a bad/whitespace-y secret slips through unnoticed).
     if (process.env.NODE_ENV === "production" || process.env.CI) {
-      console.error("[catalog] Sheet fetch FAILED with a key present — refusing to build sample data.");
+      console.error("[catalog] Sheet fetch FAILED with a key present. Refusing to build sample data.");
       console.error("[catalog]", err.message);
       throw new Error(
         `Sheet fetch failed during build: ${err.message}\n` +
         `Check the SHEET_ID and SHEET_API_KEY secrets on GitHub (no quotes/spaces), ` +
-        `and that the sheet is shared "Anyone with the link — Viewer".`
+        `and that the sheet is shared as "Anyone with the link" with Viewer access.`
       );
     }
     console.error("[catalog] Sheet fetch failed, using sample data (dev):", err.message);
@@ -265,18 +281,18 @@ const HOME_DEFAULTS = {
   hero_title_line2: "Branded Merchandise,",
   hero_title_line3: "Giveaways &",
   hero_title_highlight: "Event Support Services",
-  hero_subtitle: "Thoughtful items. Seamless events. Memorable experiences—made easy.",
+  hero_subtitle: "Custom pieces and reliable event support, all in one place.",
   hero_cta_primary: "Request Quote",
   hero_cta_secondary: "Browse Catalog",
   featured_title: "Featured Items",
-  featured_subtitle: "Popular picks for your next event.",
+  featured_subtitle: "Customer favorites for celebrations, company events, and giveaways.",
   photobooth_title: "Photobooth Services",
-  photobooth_subtitle: "Capture every smile and moment!",
+  photobooth_subtitle: "Give your guests a fun keepsake from the day.",
   photobooth_features:
     "Premium Fun & Props, Fun Props, Unlimited Prints, Digital Copies, Custom Layouts",
-  collab_kicker: "LET'S CREATE MORE SUCCESS TOGETHER",
+  collab_kicker: "LET'S WORK TOGETHER",
   collab_title: "Open for Collaborations",
-  collab_subtitle: "We work with event organizers, schools, companies, and agencies.",
+  collab_subtitle: "We partner with event organizers, schools, companies, agencies, and resellers.",
   // Default email comes from the INQUIRY_EMAIL secret so the whole site (contact
   // links, footer, inquiry send) uses one address. A Home-tab `contact_email`
   // row still overrides this if set.

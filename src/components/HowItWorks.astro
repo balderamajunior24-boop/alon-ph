@@ -1,11 +1,11 @@
 ---
 import { uiIcon } from "../lib/icons.js";
 const steps = [
-  ["mail", "Send Your Inquiry", "Tell us what you need, when, and your event details."],
-  ["edit", "Approve & Customize", "Review our mockups and confirm the design."],
-  ["settings", "We Produce", "We prepare your items with care and quality control."],
-  ["truck", "Delivery", "On-time delivery straight to your venue or address."],
-  ["check", "Event Success!", "You focus on your event, we handle the rest."],
+  ["mail", "Send an Inquiry", "Share the items, quantity, date, and details you have in mind."],
+  ["edit", "Review Your Design", "Check the mockup and let us know what to adjust."],
+  ["settings", "Production", "Once approved, we prepare your order and check every item."],
+  ["truck", "Delivery", "We arrange delivery to your venue or preferred address."],
+  ["check", "Ready for Your Event", "Your order arrives ready to hand out, display, or enjoy."],
 ];
 ---
 <section class="section works" id="how-it-works">
@@ -24,12 +24,14 @@ const steps = [
 </section>
 <style>
   .works { padding-top: 36px; }
-  .steps { display: grid; grid-template-columns: repeat(5,1fr); gap: 34px; margin-top: 25px; }
-  .step { position: relative; display: flex; min-height: 132px; align-items: flex-start; gap: 13px; padding: 22px 17px; border: 1px solid #f5d9c4; border-radius: 12px; background: linear-gradient(135deg,#fffaf5,#fff1e5); }
-  .step-icon { flex: 0 0 auto; color: var(--brand); font-size: 2rem; }
+  .steps { display: grid; grid-template-columns: repeat(5,1fr); gap: 0; margin-top: 25px; border-top: 1px solid #ddd5c8; }
+  .step { position: relative; min-height: 150px; padding: 24px 24px 18px 0; border-right: 1px solid #ddd5c8; }
+  .step:last-child { border-right:0; padding-left:24px; }
+  .step:not(:first-child) { padding-left:24px; }
+  .step-icon { display:block; margin-bottom:18px; color: var(--brand); font-size: 2rem; }
   .step h3 { margin: 1px 0 8px; font-size: .82rem; }
   .step p { margin: 0; color: #575553; font-size: .72rem; line-height: 1.55; }
-  .step i { position: absolute; z-index: 2; top: 50%; right: -29px; color: var(--brand); font-size: 1.7rem; font-style: normal; transform: translateY(-50%); }
-  @media(max-width:900px){.steps{grid-template-columns:repeat(2,1fr);gap:16px}.step i{display:none}.step:last-child{grid-column:1/-1}}
-  @media(max-width:530px){.steps{grid-template-columns:1fr}.step:last-child{grid-column:auto}}
+  .step i { display:none; }
+  @media(max-width:900px){.steps{grid-template-columns:repeat(2,1fr)}.step{border-bottom:1px solid #ddd5c8}.step:nth-child(even){border-right:0}.step:last-child{grid-column:1/-1}}
+  @media(max-width:530px){.steps{grid-template-columns:1fr}.step,.step:not(:first-child),.step:last-child{grid-column:auto;padding:20px 0;border-right:0}.step-icon{margin-bottom:12px}}
 </style>
