@@ -57,10 +57,8 @@ function parseAttributes(s) {
   return out;
 }
 
-// Build a displayable URL from a Drive file ID. Uses the `thumbnail` endpoint,
-// which is not rate-limited like lh3.googleusercontent.com. sz=w1000 keeps it
-// sharp on large gallery views.
-const driveUrlFromId = (id) => `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+// Build a displayable URL from a Drive file ID.
+const driveUrlFromId = (id) => `https://lh3.googleusercontent.com/d/${id}`;
 
 // Accepts a bare Google Drive file ID (preferred), a full Drive share link,
 // an lh3.googleusercontent.com link, or any direct image URL — and returns a
